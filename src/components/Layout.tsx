@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import Header from "./Header";
 import Footer from "./Footer";
+import ScrollToTop from "./ScrollToTop";
 
 interface LayoutProps {
   children: ReactNode;
@@ -12,6 +13,7 @@ const Layout = ({ children }: LayoutProps) => {
       <a href="#main-content" className="skip-link">
         Skip to content
       </a>
+      <ScrollToTop />
       <Header />
       <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
         {children}

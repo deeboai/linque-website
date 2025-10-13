@@ -36,9 +36,9 @@ const Contact = () => {
     },
   });
 
-  const scheduleUrl = import.meta.env.VITE_SCHEDULER_URL ?? "https://calendly.com/o-ismailalabi-linqueresourcing/30min-1";
-  const discoveryUrl =
-    import.meta.env.VITE_DISCOVERY_CALL_URL ?? "https://calendly.com/o-ismailalabi-linqueresourcing/30min-1";
+  const scheduleUrl =
+    import.meta.env.VITE_SCHEDULER_URL ??
+    "https://calendly.com/o-ismailalabi-linqueresourcing/30min-1";
   const contactEndpoint = import.meta.env.VITE_CONTACT_ENDPOINT;
 
   const onSubmit = async (values: ContactFormValues) => {
@@ -111,29 +111,31 @@ const Contact = () => {
         <div className="absolute inset-0 bg-gradient-mesh opacity-30" aria-hidden="true" />
         <div className="container mx-auto px-4 relative z-10">
           <AnimatedSection animation="fade-in-up" className="max-w-3xl space-y-6">
-            <p className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-semibold text-primary">
-              Work with Linque
-            </p>
-            <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-              Let&apos;s design the people experience your{" "}
-              <ScribbleHighlight>organization deserves</ScribbleHighlight>.
-            </h1>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              Share a few details and our team will tailor next steps for your goals. We typically respond within one
-              business day.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg">
-                <a href={scheduleUrl} target="_blank" rel="noreferrer noopener">
-                  <CalendarDays className="mr-2 h-5 w-5" aria-hidden="true" />
-                  Schedule a Call
-                </a>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <a href={discoveryUrl} target="_blank" rel="noreferrer noopener">
-                  Discovery Call
-                </a>
-              </Button>
+            <div className="space-y-6">
+              <p className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-semibold text-primary">
+                Work with Linque
+              </p>
+              <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+                Let&apos;s design the people experience your{" "}
+                <ScribbleHighlight>organization deserves</ScribbleHighlight>.
+              </h1>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                Share a few details and our team will tailor next steps for your goals. We typically respond within one
+                business day.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button asChild size="lg">
+                  <a href={scheduleUrl} target="_blank" rel="noreferrer noopener">
+                    <CalendarDays className="mr-2 h-5 w-5" aria-hidden="true" />
+                    Schedule a Call
+                  </a>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <a href="#contact-form">
+                    Contact Form
+                  </a>
+                </Button>
+              </div>
             </div>
           </AnimatedSection>
         </div>
@@ -334,8 +336,8 @@ const Contact = () => {
                   </a>
                 </Button>
                 <Button variant="outline" asChild>
-                  <a href={discoveryUrl} target="_blank" rel="noreferrer noopener">
-                    Discovery Call
+                  <a href="mailto:info@linqueresourcing.com">
+                    Email Our Team
                   </a>
                 </Button>
               </div>

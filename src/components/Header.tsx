@@ -19,14 +19,15 @@ const Header = () => {
   const navLinks = [
     { path: "/", label: "Home" },
     { path: "/about", label: "About" },
-    { path: "/how-we-work", label: "How We Work" },
     { path: "/services", label: "Services" },
-    { path: "/resources", label: "Resources" },
     { path: "/jobs", label: "Careers" },
-    { path: "/contact", label: "Contact" },
+    { path: "/contact", label: "Contact Us" },
+    { path: "/resources", label: "Blog/Resources" },
   ];
 
-  const scheduleUrl = import.meta.env.VITE_SCHEDULER_URL ?? "/contact";
+  const scheduleUrl =
+    import.meta.env.VITE_SCHEDULER_URL ??
+    "https://calendly.com/o-ismailalabi-linqueresourcing/30min-1";
   const isActive = (path: string) =>
     path === "/"
       ? location.pathname === "/"

@@ -1,97 +1,101 @@
 import { Link } from "react-router-dom";
-import { Instagram, Linkedin, Mail } from "lucide-react";
+import { Facebook, Instagram, Linkedin, Mail, Phone } from "lucide-react";
+
+const navLinks = [
+  { path: "/", label: "Home" },
+  { path: "/about", label: "About" },
+  { path: "/services", label: "Services" },
+  { path: "/jobs", label: "Careers" },
+  { path: "/contact", label: "Contact Us" },
+  { path: "/resources", label: "Blog/Resources" },
+];
 
 const Footer = () => {
   return (
     <footer className="border-t bg-muted/30">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Brand */}
-          <div className="space-y-4">
-            <h3 className="text-xl font-bold bg-gradient-hero bg-clip-text text-transparent">
+        <div className="grid gap-10 md:grid-cols-[minmax(0,1.2fr),minmax(0,1fr)] lg:grid-cols-[minmax(0,1.1fr),minmax(0,1fr),minmax(0,1fr)]">
+          <div className="space-y-5">
+            <Link to="/" className="block text-2xl font-bold bg-gradient-hero bg-clip-text text-transparent">
               Linque Resourcing
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Your link to smarter people solutions.
+            </Link>
+            <p className="max-w-xs text-sm text-muted-foreground">
+              Linque Resourcing is your partner for people-centered strategy, talent, and operations support.
             </p>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h4 className="font-semibold mb-4">Quick Links</h4>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <Link to="/about" className="text-muted-foreground hover:text-primary transition-colors">
-                  About
-                </Link>
-              </li>
-              <li>
-                <Link to="/how-we-work" className="text-muted-foreground hover:text-primary transition-colors">
-                  How We Work
-                </Link>
-              </li>
-              <li>
-                <Link to="/services" className="text-muted-foreground hover:text-primary transition-colors">
-                  Services
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Resources */}
-          <div>
-            <h4 className="font-semibold mb-4">Resources</h4>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <Link to="/resources" className="text-muted-foreground hover:text-primary transition-colors">
-                  HR Insights
-                </Link>
-              </li>
-              <li>
-                <Link to="/jobs" className="text-muted-foreground hover:text-primary transition-colors">
-                  Careers
-                </Link>
-              </li>
-              <li>
-                <Link to="/contact" className="text-muted-foreground hover:text-primary transition-colors">
-                  Contact Us
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Contact */}
-          <div>
-            <h4 className="font-semibold mb-4">Get in Touch</h4>
-            <div className="space-y-3">
+            <div className="space-y-3 text-sm text-muted-foreground">
               <a
                 href="mailto:info@linqueresourcing.com"
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+                className="flex items-center gap-2 transition-colors hover:text-primary"
               >
-                <Mail size={16} />
+                <Mail className="h-4 w-4" aria-hidden="true" />
                 info@linqueresourcing.com
               </a>
-              <div className="flex gap-4 pt-2">
-                <a
-                  href="https://www.instagram.com/linque_resourcing"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-primary transition-colors"
-                  aria-label="Instagram"
-                >
-                  <Instagram size={20} />
-                </a>
-                <a
-                  href="https://www.linkedin.com/company/linque-resourcing"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-primary transition-colors"
-                  aria-label="LinkedIn"
-                >
-                  <Linkedin size={20} />
-                </a>
-              </div>
+              <a
+                href="tel:+17133796630"
+                className="flex items-center gap-2 transition-colors hover:text-primary"
+              >
+                <Phone className="h-4 w-4" aria-hidden="true" />
+                713.379.6630
+              </a>
             </div>
+            <div className="flex items-center gap-4">
+              <a
+                href="https://www.facebook.com/profile.php?id=61575220193345&mibextid=wwXlfR&rdid=VbnVloZ9ockeyFMG&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F1FiE8TXJKE%2F%3Fmibextid%3DwwXlfR"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground transition-colors hover:text-primary"
+                aria-label="Facebook"
+              >
+                <Facebook className="h-5 w-5" />
+              </a>
+              <a
+                href="https://www.instagram.com/linque_resourcing/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground transition-colors hover:text-primary"
+                aria-label="Instagram"
+              >
+                <Instagram className="h-5 w-5" />
+              </a>
+              <a
+                href="https://www.linkedin.com/company/linque-resourcing/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-muted-foreground transition-colors hover:text-primary"
+                aria-label="LinkedIn"
+              >
+                <Linkedin className="h-5 w-5" />
+              </a>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="font-semibold text-foreground">Navigation</h4>
+            <ul className="space-y-3 text-sm">
+              {navLinks.map((link) => (
+                <li key={link.path}>
+                  <Link
+                    to={link.path}
+                    className="text-muted-foreground transition-colors hover:text-primary"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="space-y-4">
+            <h4 className="font-semibold text-foreground">Let&apos;s Partner</h4>
+            <p className="text-sm text-muted-foreground">
+              We tailor people solutions for growing organizations across industries. Reach out to explore how we can help.
+            </p>
+            <Link
+              to="/contact#contact-form"
+              className="inline-flex w-max items-center rounded-full bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Work With Us
+            </Link>
           </div>
         </div>
 

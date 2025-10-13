@@ -88,7 +88,9 @@ const HowWeWork = () => {
   const [activeStep, setActiveStep] = useState(processSteps[0].id);
   const prefersReducedMotion = usePrefersReducedMotion();
   const canonicalUrl = useMemo(() => buildCanonicalUrl("/how-we-work"), []);
-  const scheduleUrl = import.meta.env.VITE_SCHEDULER_URL ?? "/contact#contact-form";
+  const scheduleUrl =
+    import.meta.env.VITE_SCHEDULER_URL ??
+    "https://calendly.com/o-ismailalabi-linqueresourcing/30min-1";
 
   useEffect(() => {
     if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
