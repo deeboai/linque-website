@@ -15,7 +15,9 @@ const ResourceDetail = () => {
   const { slug } = useParams();
   const { data: post, isLoading } = usePost(slug);
   const prefersReducedMotion = usePrefersReducedMotion();
-  const scheduleUrl = import.meta.env.VITE_SCHEDULER_URL ?? "/contact#contact-form";
+  const scheduleUrl =
+    import.meta.env.VITE_SCHEDULER_URL ??
+    "https://calendly.com/o-ismailalabi-linqueresourcing/30min-1";
 
   if (isLoading && !post) {
     return (

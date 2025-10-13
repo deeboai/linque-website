@@ -12,6 +12,9 @@ import { useState, useEffect } from "react";
 
 const Home = () => {
   const [scrollY, setScrollY] = useState(0);
+  const scheduleUrl =
+    import.meta.env.VITE_SCHEDULER_URL ??
+    "https://calendly.com/o-ismailalabi-linqueresourcing/30min-1";
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -33,7 +36,7 @@ const Home = () => {
             transform: `translateY(${scrollY * 0.5}px)`,
           }}
         />
-        
+
         {/* Animated Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-mesh opacity-40 z-[1]" />
 
@@ -44,13 +47,19 @@ const Home = () => {
               <br />People Solutions
             </h1>
           </div>
-          
-          <p className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto animate-fade-in-up leading-relaxed" style={{ animationDelay: "0.2s" }}>
+
+          <p
+            className="text-xl md:text-2xl mb-10 max-w-3xl mx-auto animate-fade-in-up leading-relaxed"
+            style={{ animationDelay: "0.2s" }}
+          >
             We assist our clients with creating long-term impactful people solutions and strategies
             that help maximize their potential and meet their business needs.
           </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 animate-fade-in-up" style={{ animationDelay: "0.4s" }}>
+
+          <div
+            className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up"
+            style={{ animationDelay: "0.4s" }}
+          >
             <Button
               asChild
               size="lg"
@@ -66,7 +75,6 @@ const Home = () => {
               <Link to="/services">Learn More</Link>
             </Button>
           </div>
-
         </div>
       </section>
 
@@ -229,6 +237,29 @@ const Home = () => {
           </div>
         </section>
       </AnimatedSection>
+
+      <section className="bg-muted/40 py-10">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <Link
+              to="/"
+              className="text-2xl font-semibold text-primary transition-colors hover:text-primary/80"
+            >
+              Linque Resourcing
+            </Link>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="bg-white text-primary hover:bg-secondary/80"
+            >
+              <a href={scheduleUrl} target="_blank" rel="noreferrer noopener">
+                Schedule a Call
+              </a>
+            </Button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
