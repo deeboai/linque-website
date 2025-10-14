@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, Target, TrendingUp, Award } from "lucide-react";
 import heroVideo from "@/assets/YTDown.com_YouTube_Office-Stock-Footage-People-Working-As-A_Media_TUvpL_Hx0is_001_1080p.mp4";
-import promoVideo from "@/assets/website_final.mov";
+import promoVideo from "@/assets/website_final.mp4";
 import heroFallbackImage from "@/assets/hero-team-DOfHooPV.jpg";
 import AnimatedSection from "@/components/AnimatedSection";
 import ScribbleHighlight from "@/components/ScribbleHighlight";
@@ -155,7 +155,7 @@ const Home = () => {
                     poster={heroFallbackImage}
                     onError={() => setIsPromoVideoAvailable(false)}
                   >
-                    <source src={promoVideo} type="video/quicktime" />
+                    <source src={promoVideo} type="video/mp4" />
                   </video>
                 ) : (
                   <>
