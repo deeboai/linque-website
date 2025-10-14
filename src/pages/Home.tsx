@@ -2,7 +2,9 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, Target, TrendingUp, Award } from "lucide-react";
-import heroImage from "@/assets/hero-team.jpg";
+import heroVideo from "@/assets/YTDown.com_YouTube_Office-Stock-Footage-People-Working-As-A_Media_TUvpL_Hx0is_001_1080p.mp4";
+import promoVideo from "@/assets/website_final.mov";
+import heroFallbackImage from "@/assets/hero-team-DOfHooPV.jpg";
 import AnimatedSection from "@/components/AnimatedSection";
 import ScribbleHighlight from "@/components/ScribbleHighlight";
 import AnimatedCounter from "@/components/AnimatedCounter";
@@ -12,6 +14,8 @@ import { useState, useEffect } from "react";
 
 const Home = () => {
   const [scrollY, setScrollY] = useState(0);
+  const [shouldShowVideo, setShouldShowVideo] = useState(true);
+  const [isPromoVideoAvailable, setIsPromoVideoAvailable] = useState(true);
   const scheduleUrl =
     import.meta.env.VITE_SCHEDULER_URL ??
     "https://calendly.com/o-ismailalabi-linqueresourcing/30min-1";
@@ -28,14 +32,42 @@ const Home = () => {
       <section className="relative h-[90vh] flex items-center justify-center overflow-hidden">
         {/* Parallax Background */}
         <div
-          className="absolute inset-0 z-0 parallax-bg"
+          className="absolute inset-0 z-0 parallax-bg overflow-hidden"
           style={{
-            backgroundImage: `linear-gradient(rgba(36, 37, 76, 0.9), rgba(52, 38, 105, 0.82)), url(${heroImage})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
             transform: `translateY(${scrollY * 0.5}px)`,
           }}
-        />
+        >
+          <img
+            src={heroFallbackImage}
+            alt="Linque Resourcing team collaborating in an office"
+            className="h-full w-full object-cover"
+            loading="eager"
+            aria-hidden={shouldShowVideo}
+          />
+          {shouldShowVideo && (
+            <video
+              className="absolute inset-0 h-full w-full object-cover"
+              autoPlay
+              muted
+              loop
+              playsInline
+              poster={heroFallbackImage}
+              onError={() => setShouldShowVideo(false)}
+            >
+              <source
+                src={heroVideo}
+                type="video/mp4"
+              />
+            </video>
+          )}
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(rgba(36, 37, 76, 0.9), rgba(52, 38, 105, 0.82))",
+            }}
+          />
+        </div>
 
         {/* Animated Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-mesh opacity-40 z-[1]" />
@@ -85,7 +117,7 @@ const Home = () => {
           <div className="container mx-auto px-4 relative">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-5xl mx-auto">
               {[
-                { value: 20, suffix: "+", label: "Years Experience" },
+                { value: 10, suffix: "+", label: "Years Experience" },
                 { value: 500, suffix: "+", label: "Clients Served" },
                 { value: 1000, suffix: "+", label: "Placements Made" },
                 { value: 98, suffix: "%", label: "Success Rate" },
@@ -113,8 +145,33 @@ const Home = () => {
               <p className="text-center text-muted-foreground mb-12 text-lg">
                 See how we're transforming HR for businesses worldwide
               </p>
-              <div className="aspect-video bg-muted rounded-2xl shadow-elegant flex items-center justify-center hover-lift transition-all duration-500 hover:shadow-glow">
-                <p className="text-muted-foreground">Promo video coming soon</p>
+              <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/30 bg-muted shadow-elegant hover-lift transition-all duration-500 hover:shadow-glow">
+                {isPromoVideoAvailable ? (
+                  <video
+                    className="h-full w-full object-cover"
+                    controls
+                    playsInline
+                    preload="metadata"
+                    poster={heroFallbackImage}
+                    onError={() => setIsPromoVideoAvailable(false)}
+                  >
+                    <source src={promoVideo} type="video/quicktime" />
+                  </video>
+                ) : (
+                  <>
+                    <img
+                      src={heroFallbackImage}
+                      alt="Linque Resourcing consultants collaborating"
+                      className="h-full w-full object-cover"
+                    />
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/70 text-center text-muted-foreground">
+                      <p className="text-base font-semibold">Promo video currently unavailable</p>
+                      <p className="text-sm mt-2 max-w-xs">
+                        Check back soon to learn more about how we transform people operations.
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -137,7 +194,7 @@ const Home = () => {
             {[
               {
                 icon: Users,
-                title: "20+ Years Experience",
+                title: "10+ Years Experience",
                 description: "Industry-leading expertise in HR consulting and talent solutions.",
                 delay: 0,
               },
