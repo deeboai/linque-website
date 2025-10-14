@@ -17,7 +17,7 @@ import ScribbleHighlight from "@/components/ScribbleHighlight";
 import LazyImage from "@/components/LazyImage";
 import Seo from "@/components/Seo";
 import { buildCanonicalUrl } from "@/lib/seo";
-import heroImage from "@/assets/services-tech.jpg";
+import heroImage from "@/assets/10_MARKETPLACE_SHOT_5_0862_02_QC.webp";
 import {
   Accordion,
   AccordionContent,
@@ -222,11 +222,7 @@ const Services = () => {
               </p>
             </div>
 
-            <Accordion
-              type="multiple"
-              defaultValue={[services[0].title]}
-              className="mt-12 space-y-4"
-            >
+            <Accordion type="multiple" className="mt-12 space-y-4">
               {services.map((service) => {
                 const Icon = service.icon;
                 return (
