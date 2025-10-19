@@ -80,25 +80,33 @@ for each row execute procedure public.handle_updated_at();
 alter table public.posts enable row level security;
 alter table public.jobs enable row level security;
 
--- Public read policies
+-- Public read policies (drop and recreate to avoid conflicts)
+drop policy if exists "Public posts can be read" on public.posts;
 create policy "Public posts can be read"
   on public.posts for select
   using (status = 'published');
 
+drop policy if exists "Public jobs can be read" on public.jobs;
 create policy "Public jobs can be read"
   on public.jobs for select
   using (status = 'published');
 
--- Admin management policies
+-- Admin management policies (drop and recreate to avoid conflicts)
+drop policy if exists "Admins manage posts" on public.posts;
 create policy "Admins manage posts"
   on public.posts for all
   using (auth.role() = 'authenticated')
   with check (auth.role() = 'authenticated');
 
+drop policy if exists "Admins manage jobs" on public.jobs;
 create policy "Admins manage jobs"
   on public.jobs for all
   using (auth.role() = 'authenticated')
   with check (auth.role() = 'authenticated');
+
+-- SECURITY NOTE: Also disable public signups in Supabase Dashboard:
+-- Go to Authentication > Settings > "Enable email confirmations" = ON
+-- Go to Authentication > Settings > "Enable signup" = OFF (after creating admin account)
 ```
 
 ### 1.3 Get Credentials
@@ -138,13 +146,24 @@ If client has custom domain:
 
 ### 3.1 Create Admin User
 1. Go to `https://admin.linqueresourcing.com` (or your admin URL)
-2. Click "Sign Up"
+2. Click "Initial setup? Create admin account"
 3. Create account:
-   - **Email**: `admin@linqueresourcing.com`
-   - **Password**: `LinqueAdmin2024!`
+   - **Email**: `etoure33@gmail.com`
+   - **Password**: `HelloWorld2025`
 4. Confirm email if required
 
-### 3.2 Test Admin Functionality
+### 3.2 Secure the Authentication
+**IMPORTANT: Do this immediately after creating the admin account!**
+
+1. In Supabase Dashboard: Authentication > Settings
+2. **Disable public signups**:
+   - Set "Enable signup" to **OFF**
+   - This prevents anyone else from creating accounts
+3. **Enable email confirmations**:
+   - Set "Enable email confirmations" to **ON**
+   - Adds extra security layer
+
+### 3.3 Test Admin Functionality
 1. Log in with admin credentials
 2. Create a test blog post
 3. Create a test job posting
@@ -173,8 +192,8 @@ Create a sample job to demonstrate:
 ### 5.1 Provide Client With:
 - [ ] `CLIENT_HANDOFF_GUIDE.md` (already created)
 - [ ] Admin URL: `https://admin.linqueresourcing.com`
-- [ ] Login credentials: `admin@linqueresourcing.com` / `LinqueAdmin2024!`
-- [ ] Instruction to change password immediately
+- [ ] Login credentials: `etoure33@gmail.com` / `HelloWorld2025`
+- [ ] Instruction to change password immediately after first login
 
 ### 5.2 Walk-Through Session (Recommended)
 Schedule 30-minute call to:
