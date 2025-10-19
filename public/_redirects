@@ -1,8 +1,8 @@
 # Netlify redirects for professional admin access
 # This enables admin.clientdomain.com to work seamlessly
 
-# Admin subdomain redirects to /admin route  
-https://admin.linqueresourcing.com/* https://linqueresourcing.com/admin 301!
+# Admin subdomain redirects to main site /admin route  
+https://admin.linqueresourcing.com/* https://linqueresourcing.com/admin/:splat 200!
 
 # Alternative easy access routes for client
 /cms /admin 200
@@ -10,5 +10,5 @@ https://admin.linqueresourcing.com/* https://linqueresourcing.com/admin 301!
 /manage /admin 200
 /dashboard /admin 200
 
-# Ensure admin route is accessible
-/admin/* /admin/index.html 200
+# SPA fallback - must be last rule
+/* /index.html 200
