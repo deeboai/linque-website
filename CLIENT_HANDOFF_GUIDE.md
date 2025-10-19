@@ -19,10 +19,10 @@ This website comes with a professional content management system that allows you
 
 ## 👤 Your Admin Login Credentials
 
-**Email**: `hidden@example.com`
-**Password**: `HelloWorld2025`
+**Email**: `hidden@example.com` or `info@linqueresourcing.com`
+**Password**: `HelloWorld2025` (if etoure33) or `LinqueAdmin2024!` (if info)
 
-> ⚠️ **Important**: Change this password immediately after first login for security
+> ⚠️ **Important**: Let me know once this works well. We will immidiately change these passwords
 
 ## 📝 How to Manage Content
 
@@ -62,6 +62,8 @@ This website comes with a professional content management system that allows you
 - **Project URL**: `https://pjulmtncozgzunwfsqnx.supabase.co`
 - **Database Password**: `LinqueDB2024!`
 - **Admin Email**: `hidden@example.com`
+
+> ⚠️ **Important**: Let me know once this works well. We will immidiately change these passwords
 
 ### Netlify Hosting Details  
 - **Site URL**: `https://linqueresourcing.com`
