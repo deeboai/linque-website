@@ -22,7 +22,8 @@ export const usePosts = (options?: FetchOptions) => {
     queryKey: postsQueryKey({ includeDrafts }),
     queryFn: () => fetchPosts({ includeDrafts }),
     staleTime: 60 * 1000,
-    initialData: includeDrafts ? undefined : contentSource.fallbackPosts,
+    // Temporarily disabled fallback data to test database connection
+    // initialData: includeDrafts ? undefined : contentSource.fallbackPosts,
   });
 };
 
@@ -53,7 +54,8 @@ export const useJobs = (options?: FetchOptions) => {
     queryKey: jobsQueryKey({ includeDrafts }),
     queryFn: () => fetchJobs({ includeDrafts }),
     staleTime: 60 * 1000,
-    initialData: includeDrafts ? undefined : contentSource.fallbackJobs,
+    // Temporarily disabled fallback data to test database connection
+    // initialData: includeDrafts ? undefined : contentSource.fallbackJobs,
   });
 };
 
