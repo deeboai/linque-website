@@ -64,6 +64,7 @@ for each row execute procedure public.handle_updated_at();
 alter table public.posts enable row level security;
 alter table public.jobs enable row level security;
 
+-- Public read policies (drop and recreate to avoid conflicts)
 drop policy if exists "Public posts can be read" on public.posts;
 create policy "Public posts can be read"
   on public.posts
@@ -76,7 +77,7 @@ create policy "Public jobs can be read"
   for select
   using (status = 'published');
 
--- Replace 'admin' with your preferred role or use auth.uid() checks.
+-- Admin management policies (drop and recreate to avoid conflicts)
 drop policy if exists "Admins manage posts" on public.posts;
 create policy "Admins manage posts"
   on public.posts

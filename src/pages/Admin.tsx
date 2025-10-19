@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Auth } from "@supabase/auth-ui-react";
-import { ThemeSupa } from "@supabase/auth-ui-shared";
 import { type Session } from "@supabase/supabase-js";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,12 +15,14 @@ import {
 } from "@/lib/content";
 import { usePosts, useJobs, postsQueryKey, jobsQueryKey } from "@/hooks/useContent";
 import AnimatedSection from "@/components/AnimatedSection";
+import { CustomAuth } from "@/components/CustomAuth";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -210,15 +210,7 @@ const Admin = () => {
           canonicalUrl={canonicalUrl}
           noIndex
         />
-        <Card className="w-full max-w-md border-muted/60 p-8 shadow-card">
-          <h1 className="mb-6 text-2xl font-semibold text-center">Linque Admin</h1>
-          <Auth
-            supabaseClient={supabase}
-            appearance={{ theme: ThemeSupa }}
-            providers={[]}
-            redirectTo={`${window.location.origin}/admin`}
-          />
-        </Card>
+        <CustomAuth />
       </div>
     );
   }
@@ -268,7 +260,7 @@ const PostsManager = () => {
   const mutation = useMutation({
     mutationFn: upsertPost,
     onSuccess: async () => {
-      await queryClient.invalidateQueries(postsQueryKey({ includeDrafts: true }));
+      await queryClient.invalidateQueries({ queryKey: postsQueryKey({ includeDrafts: true }) });
       toast({ title: "Post saved" });
       setIsDialogOpen(false);
     },
@@ -281,7 +273,7 @@ const PostsManager = () => {
   const deleteMutation = useMutation({
     mutationFn: deletePost,
     onSuccess: async () => {
-      await queryClient.invalidateQueries(postsQueryKey({ includeDrafts: true }));
+      await queryClient.invalidateQueries({ queryKey: postsQueryKey({ includeDrafts: true }) });
       toast({ title: "Post deleted" });
     },
     onError: (error) => {
@@ -377,7 +369,7 @@ const JobsManager = () => {
   const mutation = useMutation({
     mutationFn: upsertJob,
     onSuccess: async () => {
-      await queryClient.invalidateQueries(jobsQueryKey({ includeDrafts: true }));
+      await queryClient.invalidateQueries({ queryKey: jobsQueryKey({ includeDrafts: true }) });
       toast({ title: "Job saved" });
       setIsDialogOpen(false);
     },
@@ -390,7 +382,7 @@ const JobsManager = () => {
   const deleteMutation = useMutation({
     mutationFn: deleteJob,
     onSuccess: async () => {
-      await queryClient.invalidateQueries(jobsQueryKey({ includeDrafts: true }));
+      await queryClient.invalidateQueries({ queryKey: jobsQueryKey({ includeDrafts: true }) });
       toast({ title: "Job deleted" });
     },
     onError: (error) => {
@@ -484,6 +476,7 @@ interface PostDialogProps {
 }
 
 const PostDialog = ({ open, onOpenChange, post, submitting, onSubmit }: PostDialogProps) => {
+  const [showPreview, setShowPreview] = useState(false);
   const { control, register, handleSubmit, watch, setValue } = useForm<PostFormValues>({
     defaultValues: mapPostToFormValues(post),
     values: mapPostToFormValues(post),
@@ -492,6 +485,8 @@ const PostDialog = ({ open, onOpenChange, post, submitting, onSubmit }: PostDial
     control,
     name: "sections",
   });
+
+  const formValues = watch();
 
   useEffect(() => {
     if (!post) {
@@ -534,12 +529,93 @@ const PostDialog = ({ open, onOpenChange, post, submitting, onSubmit }: PostDial
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>{post ? "Edit post" : "Create post"}</DialogTitle>
-          <DialogDescription>
-            Published posts appear automatically on the Resources page. Drafts remain private until published.
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>{post ? "Edit post" : "Create post"}</DialogTitle>
+              <DialogDescription>
+                Published posts appear automatically on the Resources page. Drafts remain private until published.
+              </DialogDescription>
+            </div>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setShowPreview(!showPreview)}
+              className="shrink-0"
+            >
+              {showPreview ? "Edit" : "Preview"}
+            </Button>
+          </div>
         </DialogHeader>
-        <form onSubmit={handleSubmit(submit)} className="space-y-6 py-4">
+        
+        {showPreview ? (
+          <div className="py-4 space-y-4">
+            <div className="border rounded-lg p-6 bg-white">
+              <div className="mb-4">
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">{formValues.title || "Untitled Post"}</h1>
+                <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                  {formValues.category && <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded">{formValues.category}</span>}
+                  <span>Status: {formValues.status || 'draft'}</span>
+                  {formValues.readTimeMinutes && <span>{formValues.readTimeMinutes} min read</span>}
+                </div>
+                {formValues.excerpt && (
+                  <p className="text-lg text-gray-700 italic border-l-4 border-blue-500 pl-4 mb-6">
+                    {formValues.excerpt}
+                  </p>
+                )}
+              </div>
+              
+              <div className="prose max-w-none">
+                {formValues.sections && formValues.sections.length > 0 ? (
+                  formValues.sections.map((section, index) => (
+                    <div key={index} className="mb-6">
+                      {section.heading && <h2 className="text-xl font-semibold mb-3">{section.heading}</h2>}
+                      {section.body && (
+                        <div className="whitespace-pre-wrap text-gray-700">{section.body}</div>
+                      )}
+                      {section.bullets && (
+                        <ul className="list-disc list-inside mt-2">
+                          {section.bullets.split('\n').filter(bullet => bullet.trim()).map((bullet, idx) => (
+                            <li key={idx} className="text-gray-700">{bullet.trim()}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 italic">No content sections added yet.</p>
+                )}
+              </div>
+              
+              {formValues.tags && (
+                <div className="mt-6 pt-4 border-t">
+                  <div className="flex flex-wrap gap-2">
+                    {formValues.tags.split(',').map((tag, index) => (
+                      <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm">
+                        {tag.trim()}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit(submit)} disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> Saving…
+                  </>
+                ) : (
+                  "Save post"
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit(submit)} className="space-y-6 py-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="title">Title</Label>
@@ -547,6 +623,7 @@ const PostDialog = ({ open, onOpenChange, post, submitting, onSubmit }: PostDial
             </div>
             <div className="space-y-2">
               <Label htmlFor="slug">Slug</Label>
+              <p className="text-sm text-gray-600">URL-friendly version of the title (e.g., "my-blog-post"). Click "Auto" to generate from title.</p>
               <div className="flex gap-2">
                 <Input id="slug" {...register("slug", { required: true })} placeholder="auto-generated" />
                 <Button type="button" variant="outline" onClick={handleGenerateSlug}>
@@ -570,14 +647,23 @@ const PostDialog = ({ open, onOpenChange, post, submitting, onSubmit }: PostDial
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <select id="status" className="w-full rounded-md border border-input px-3 py-2" {...register("status")}>
-                <option value="draft">Draft</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="published">Published</option>
-              </select>
+              <Select
+                value={watch("status")}
+                onValueChange={(value) => setValue("status", value as "draft" | "scheduled" | "published")}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft - Save without publishing</SelectItem>
+                  <SelectItem value="scheduled">Scheduled - Publish at specified date</SelectItem>
+                  <SelectItem value="published">Published - Make live on website now</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="publishedAt">Publish date</Label>
+              <Label htmlFor="publishedAt">Publish date & time</Label>
+              <p className="text-sm text-gray-600">Set when this post should be published. Leave empty to publish immediately when status is "Published".</p>
               <Input id="publishedAt" type="datetime-local" {...register("publishedAt")} />
             </div>
           </div>
@@ -595,12 +681,14 @@ const PostDialog = ({ open, onOpenChange, post, submitting, onSubmit }: PostDial
 
           <div className="space-y-2">
             <Label htmlFor="excerpt">Excerpt</Label>
-            <Textarea id="excerpt" rows={2} {...register("excerpt")} />
+            <p className="text-sm text-gray-600">A short summary of your post (2-3 sentences). This appears on the blog listing page and in social media previews.</p>
+            <Textarea id="excerpt" rows={2} {...register("excerpt")} placeholder="Write a compelling summary of your post..." />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="description">SEO description</Label>
-            <Textarea id="description" rows={2} {...register("description")} />
+            <p className="text-sm text-gray-600">Meta description for search engines (150-160 characters). This appears in Google search results under your page title.</p>
+            <Textarea id="description" rows={2} {...register("description")} placeholder="Describe your post for search engines..." />
           </div>
 
           <div className="space-y-4">
@@ -667,6 +755,7 @@ const PostDialog = ({ open, onOpenChange, post, submitting, onSubmit }: PostDial
             </Button>
           </div>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -681,10 +770,13 @@ interface JobDialogProps {
 }
 
 const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogProps) => {
-  const { register, handleSubmit } = useForm<JobFormValues>({
+  const [showPreview, setShowPreview] = useState(false);
+  const { register, handleSubmit, watch, setValue } = useForm<JobFormValues>({
     defaultValues: mapJobToFormValues(job),
     values: mapJobToFormValues(job),
   });
+
+  const formValues = watch();
 
   const submit = (values: JobFormValues) => {
     const payload = {
@@ -716,12 +808,106 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{job ? "Edit job" : "Create job"}</DialogTitle>
-          <DialogDescription>
-            Published jobs appear instantly on the careers page. Drafts remain private until published.
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>{job ? "Edit job" : "Create job"}</DialogTitle>
+              <DialogDescription>
+                Published jobs appear instantly on the careers page. Drafts remain private until published.
+              </DialogDescription>
+            </div>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setShowPreview(!showPreview)}
+              className="shrink-0"
+            >
+              {showPreview ? "Edit" : "Preview"}
+            </Button>
+          </div>
         </DialogHeader>
-        <form onSubmit={handleSubmit(submit)} className="space-y-6 py-4">
+        
+        {showPreview ? (
+          <div className="py-4 space-y-4">
+            <div className="border rounded-lg p-6 bg-white">
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">{formValues.title || "Untitled Job"}</h1>
+                <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                  <span className="bg-green-100 text-green-700 px-2 py-1 rounded">{formValues.department || "General"}</span>
+                  <span>{formValues.location}</span>
+                  <span>{formValues.employmentType}</span>
+                  <span>{formValues.remoteType}</span>
+                  <span>Status: {formValues.status || 'draft'}</span>
+                </div>
+                {formValues.salaryRange && (
+                  <p className="text-lg font-semibold text-gray-900 mb-4">
+                    💰 {formValues.salaryRange}
+                  </p>
+                )}
+              </div>
+              
+              <div className="space-y-6">
+                {formValues.description && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Job Description</h3>
+                    <div className="whitespace-pre-wrap text-gray-700">{formValues.description}</div>
+                  </div>
+                )}
+                
+                {formValues.responsibilities && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Responsibilities</h3>
+                    <ul className="list-disc list-inside space-y-1">
+                      {formValues.responsibilities.split('\n').filter(resp => resp.trim()).map((resp, index) => (
+                        <li key={index} className="text-gray-700">{resp.trim()}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                {formValues.qualifications && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Qualifications</h3>
+                    <ul className="list-disc list-inside space-y-1">
+                      {formValues.qualifications.split('\n').filter(qual => qual.trim()).map((qual, index) => (
+                        <li key={index} className="text-gray-700">{qual.trim()}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                <div className="pt-6 border-t">
+                  <h3 className="text-lg font-semibold mb-2">How to Apply</h3>
+                  {formValues.applyEmail && (
+                    <p className="mb-2">
+                      <strong>Email:</strong> <a href={`mailto:${formValues.applyEmail}`} className="text-blue-600 hover:underline">{formValues.applyEmail}</a>
+                    </p>
+                  )}
+                  {formValues.applyUrl && (
+                    <p>
+                      <strong>Application URL:</strong> <a href={formValues.applyUrl} className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer">{formValues.applyUrl}</a>
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmit(submit)} disabled={submitting}>
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> Saving…
+                  </>
+                ) : (
+                  "Save job"
+                )}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit(submit)} className="space-y-6 py-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="job-title">Title</Label>
@@ -762,14 +948,23 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="job-status">Status</Label>
-              <select id="job-status" className="w-full rounded-md border border-input px-3 py-2" {...register("status")}>
-                <option value="draft">Draft</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="published">Published</option>
-              </select>
+              <Select
+                value={watch("status")}
+                onValueChange={(value) => setValue("status", value as "draft" | "scheduled" | "published")}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft - Save without publishing</SelectItem>
+                  <SelectItem value="scheduled">Scheduled - Publish at specified date</SelectItem>
+                  <SelectItem value="published">Published - Make live on website now</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="job-postedAt">Publish date</Label>
+              <Label htmlFor="job-postedAt">Publish date & time</Label>
+              <p className="text-sm text-gray-600">Set when this job should be published. Leave empty to publish immediately when status is "Published".</p>
               <Input id="job-postedAt" type="datetime-local" {...register("postedAt")} />
             </div>
           </div>
@@ -821,6 +1016,7 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
             </Button>
           </div>
         </form>
+        )}
       </DialogContent>
     </Dialog>
   );
