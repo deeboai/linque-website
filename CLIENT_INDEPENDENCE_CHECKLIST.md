@@ -11,8 +11,8 @@
 - [ ] All redirects working properly
 
 ### ✅ Authentication & Security
-- [ ] Admin account created: `admin@linqueresourcing.com`
-- [ ] Password set: `LinqueAdmin2024!` 
+- [ ] Admin account created: `hidden@example.com`
+- [ ] Password set: `HelloWorld2025` 
 - [ ] Email confirmation working (if enabled)
 - [ ] Row Level Security policies active
 - [ ] Admin panel only accessible via HTTPS
