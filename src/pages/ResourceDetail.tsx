@@ -29,10 +29,10 @@ const ResourceDetail = () => {
   }
 
   if (!post) {
-    return <Navigate to="/resources" replace />;
+    return <Navigate to="/linque-learn" replace />;
   }
 
-  const canonicalUrl = buildCanonicalUrl(`/resources/${post.slug}`);
+  const canonicalUrl = buildCanonicalUrl(`/linque-learn/${post.slug}`);
   const headings = post.content
     .map((section, index) => ({
       id: section.heading ? `${post.slug}-section-${index}` : null,
@@ -52,7 +52,7 @@ const ResourceDetail = () => {
   return (
     <div className="min-h-screen bg-background">
       <Seo
-        title={`${post.title} | Linque Resourcing Insights`}
+        title={`${post.title} | Linque Learn`}
         description={post.description}
         canonicalUrl={canonicalUrl}
         openGraph={{
@@ -84,9 +84,9 @@ const ResourceDetail = () => {
         <div className="container mx-auto px-4 relative z-10">
           <AnimatedSection animation="fade-in-up" className="space-y-6">
             <Button variant="ghost" asChild className="w-fit px-0 text-muted-foreground hover:text-primary">
-              <Link to="/resources" className="inline-flex items-center gap-2 text-sm font-semibold">
+              <Link to="/linque-learn" className="inline-flex items-center gap-2 text-sm font-semibold">
                 <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-                Back to insights
+                Back to Linque Learn
               </Link>
             </Button>
             <div className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">

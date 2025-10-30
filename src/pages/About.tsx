@@ -2,6 +2,9 @@ import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Target, Eye, CheckCircle } from "lucide-react";
 import aboutImage from "@/assets/priscilla-du-preez-nNMBa7Y1Ymk-unsplash.webp";
+import aboutHeroBackground from "@/assets/aboutusbackground.webp";
+import certificationFullBadge from "@/assets/certification.png";
+import certificationPmpBadge from "@/assets/certification2.png";
 import AnimatedSection from "@/components/AnimatedSection";
 import ScribbleHighlight from "@/components/ScribbleHighlight";
 import { Button } from "@/components/ui/button";
@@ -10,17 +13,21 @@ const About = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="py-24 bg-gradient-subtle relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-mesh opacity-20" />
-        <AnimatedSection className="container mx-auto px-4 relative">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">
+      <section className="relative flex min-h-[70vh] items-center overflow-hidden">
+        <div className="absolute inset-0">
+          <img
+            src={aboutHeroBackground}
+            alt="Linque team collaborating"
+            className="h-full w-full object-cover"
+            loading="eager"
+          />
+          <div className="absolute inset-0 bg-slate-900/70" />
+        </div>
+        <AnimatedSection className="container relative z-10 mx-auto px-4">
+          <div className="mx-auto max-w-4xl text-center text-white">
+            <h1 className="text-5xl md:text-6xl font-bold drop-shadow-lg">
               About <ScribbleHighlight>Us</ScribbleHighlight>
             </h1>
-            <p className="text-xl text-muted-foreground leading-relaxed">
-              Linque Resourcing is a people-first consultancy helping organizations design, build, and scale strategic HR
-              functions that unlock performance.
-            </p>
           </div>
         </AnimatedSection>
       </section>
@@ -45,19 +52,11 @@ const About = () => {
                 <h2 className="text-4xl font-bold mb-6">Who We Are</h2>
                 <div className="space-y-6 text-muted-foreground text-lg leading-relaxed">
                   <p>
-                    With more than <span className="font-semibold text-primary">two decades of experience</span>, Linque
-                    Resourcing partners with executives and HR leaders to architect people strategies that accelerate
-                    growth. We combine enterprise HR leadership, PMP-certified program expertise, and a practical approach
-                    to transformation so every engagement is grounded in execution.
-                  </p>
-                  <p>
-                    Our team has supported organizations spanning energy, technology, nonprofit, healthcare, and
-                    professional services. That breadth of industry insight helps us adapt quickly to your operating
-                    realities while introducing best practices that deliver measurable results.
-                  </p>
-                  <p>
-                    From strategic planning to fractional HR leadership, we stay alongside you to ensure strategies are
-                    adopted, teams are enabled, and the people experience reflects your brand.
+                    We are a talent management consulting company offering strategic, tailored partnerships to support our clients in achieving
+                    organizational success. Through collaboration, we seek to understand your challenges and goals, ensuring our strategies align 
+                    with your organizational vision. Our approach is rooted in innovation, professionalism, and a deep understanding of the 
+                    ever-evolving landscape. With a commitment to excellence and a passion for people operations, we specialize in providing 
+                    comprehensive people solutions that empower businesses to thrive.
                   </p>
                   <p className="font-semibold text-primary">Let us be your link to smarter people solutions.</p>
                 </div>
@@ -125,20 +124,73 @@ const About = () => {
           <AnimatedSection animation="fade-in-up" className="mx-auto max-w-4xl">
               <div className="rounded-3xl border border-muted/50 bg-white/90 p-10 shadow-card">
                 <ul className="grid gap-6 text-muted-foreground md:grid-cols-2">
-                  {[
-                    "20+ years leading people strategy and operations across growth stages.",
-                    "Certified PMP leadership guiding complex transformations with precision.",
-                    "Experience across public, private, nonprofit, and international sectors.",
-                    "Dedicated consultants embedded with your teams for continuity.",
-                    "Tailored solutions that reflect your culture, pace, and goals.",
-                    "The Linque Talent framework aligning strategy, people, and technology.",
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-3">
-                      <CheckCircle className="mt-1 h-5 w-5 text-primary" aria-hidden="true" />
-                      <span className="text-base leading-relaxed text-foreground/90">{item}</span>
-                    </li>
-                ))}
-              </ul>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="mt-1 h-5 w-5 text-primary" aria-hidden="true" />
+                    <span className="text-base leading-relaxed text-foreground/90">
+                      10+ years leading people strategy and operations across growth stages.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="mt-1 h-5 w-5 text-primary" aria-hidden="true" />
+                    <span className="text-base leading-relaxed text-foreground/90">
+                      Experience across public, private, nonprofit, and international sectors.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="mt-1 h-5 w-5 text-primary" aria-hidden="true" />
+                    <span className="text-base leading-relaxed text-foreground/90">
+                      Dedicated consultants embedded with your teams for continuity.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle className="mt-1 h-5 w-5 text-primary" aria-hidden="true" />
+                    <span className="text-base leading-relaxed text-foreground/90">
+                      Tailored solutions that reflect your culture, pace, and goals.
+                    </span>
+                  </li>
+                  <li className="flex flex-col gap-4 md:col-span-2 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="mt-1 h-5 w-5 flex-shrink-0 text-primary" aria-hidden="true" />
+                      <div className="space-y-2">
+                        <span className="block text-base leading-relaxed text-foreground/90">
+                          Certified PMP leadership guiding complex transformations with precision.
+                        </span>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          Project delivery discipline that keeps milestones, dependencies, and teams aligned from kickoff to closeout.
+                        </p>
+                      </div>
+                    </div>
+                    <img
+                      src={certificationPmpBadge}
+                      alt="PMP certification badge"
+                      className="h-20 w-auto rounded-lg border border-white/50 bg-white/70 p-2 shadow-sm"
+                    />
+                  </li>
+                  <li className="flex flex-col gap-4 md:col-span-2 md:flex-row md:items-center md:justify-between">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="mt-1 h-5 w-5 flex-shrink-0 text-primary" aria-hidden="true" />
+                      <div className="space-y-2">
+                        <span className="block text-base leading-relaxed text-foreground/90">
+                          SHRM-CP professional and certified mediator.
+                        </span>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          Recognized expertise that balances people advocacy with mediation skills to move complex conversations forward.
+                        </p>
+                      </div>
+                    </div>
+                    <img
+                      src={certificationFullBadge}
+                      alt="SHRM-CP certification badge"
+                      className="h-20 w-auto rounded-lg border border-white/50 bg-white/70 p-2 shadow-sm"
+                    />
+                  </li>
+                  <li className="md:col-span-2 flex items-start gap-3 rounded-2xl border border-primary/20 bg-primary/5 p-5">
+                    <CheckCircle className="mt-1 h-5 w-5 text-primary" aria-hidden="true" />
+                    <span className="text-base leading-relaxed text-foreground/90">
+                      Coming soon, the Linque Talent framework aligning strategy, people, and technology.
+                    </span>
+                  </li>
+                </ul>
               <div className="mt-10 flex justify-center">
                 <Button asChild size="lg">
                   <Link to="/contact#contact-form">Work With Us</Link>

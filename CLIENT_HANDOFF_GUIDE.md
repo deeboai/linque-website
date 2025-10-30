@@ -1,13 +1,13 @@
 # Client Handoff Guide: Linque Website Content Management System
 
-## 🎯 Overview
+##  Overview
 This website comes with a professional content management system that allows you to:
-- ✅ Add, edit, and delete blog posts
-- ✅ Manage job postings  
-- ✅ Publish content instantly to your live website
-- ✅ Access from anywhere with internet connection
+-  Add, edit, and delete blog posts
+-  Manage job postings  
+-  Publish content instantly to your live website
+-  Access from anywhere with internet connection
 
-## 🚀 Accessing Your Admin Panel
+##  Accessing Your Admin Panel
 
 ### Primary Access (Recommended)
 **URL**: `https://admin.linqueresourcing.com`
@@ -22,9 +22,9 @@ This website comes with a professional content management system that allows you
 **Email**: `etoure33@gmail.com` or `info@linqueresourcing.com`
 **Password**: `HelloWorld2025` (if etoure33) or `LinqueAdmin2024!` (if info)
 
-> ⚠️ **Important**: Let me know once this works well. We will immidiately change these passwords
+>  **Important**: Let me know once this works well. We will immidiately change these passwords
 
-## 📝 How to Manage Content
+##  How to Manage Content
 
 ### Managing Blog Posts
 1. Go to your admin panel and log in
@@ -63,7 +63,7 @@ This website comes with a professional content management system that allows you
 - **Database Password**: `LinqueDB2024!`
 - **Admin Email**: `etoure33@gmail.com`
 
-> ⚠️ **Important**: Let me know once this works well. We will immidiately change these passwords
+>  **Important**: Let me know once this works well. We will immidiately change these passwords
 
 ### Netlify Hosting Details  
 - **Site URL**: `https://linqueresourcing.com`
@@ -74,7 +74,7 @@ This website comes with a professional content management system that allows you
 - `VITE_SUPABASE_URL`: Database connection
 - `VITE_SUPABASE_ANON_KEY`: Database access key
 
-## 🆘 Troubleshooting
+##  Troubleshooting
 
 ### Can't Log In?
 1. Double-check the URL: `https://admin.linqueresourcing.com`
@@ -93,18 +93,16 @@ This website comes with a professional content management system that allows you
 2. Check your email for reset link
 3. Follow the instructions to create a new password
 
-## 📞 Support
+##  Support
 If you need help or have questions:
 1. Check this guide first
 2. Contact your developer who set this up
 3. All your content is safely backed up in the database
 
-## 🔐 Security Best Practices
-- ✅ Change default password immediately
-- ✅ Use a strong, unique password
-- ✅ Don't share login credentials
-- ✅ Log out when finished editing
-- ✅ Only access admin panel from trusted devices/networks
+##  Security Best Practices
+-  Don't share login credentials
+-  Log out when finished editing
+-  Only access admin panel from trusted devices/networks
 
 ---
 

@@ -13,16 +13,14 @@ interface CustomAuthProps {
 
 export const CustomAuth: React.FC<CustomAuthProps> = ({ onAuthSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
-  // Disable sign up for production - only allow sign in
-  const [isSignUp, setIsSignUp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { toast } = useToast();
 
-  // Only allow sign up if no admin exists yet (for initial setup)
-  const [allowSignUp, setAllowSignUp] = useState(true); // Change to false after setup
+  // Sign up disabled for security - only existing accounts can sign in
+  const allowSignUp = false;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,47 +30,15 @@ export const CustomAuth: React.FC<CustomAuthProps> = ({ onAuthSuccess }) => {
     setError('');
 
     try {
-      if (isSignUp && allowSignUp) {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/admin`,
-            // Skip email confirmation for development
-            data: {
-              email_confirm: true
-            }
-          }
-        });
-        
-        if (error) throw error;
-        
-        // If user is created but needs confirmation, show appropriate message
-        if (data.user && !data.session) {
-          toast({
-            title: 'Account created!',
-            description: 'Please check your email to confirm your account, or contact your developer to disable email confirmation.'
-          });
-        } else {
-          toast({
-            title: 'Account created and signed in!',
-            description: 'Welcome to your admin panel.'
-          });
-        }
-        
-        // Disable sign up after first account is created
-        setAllowSignUp(false);
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        
-        if (error) throw error;
-        
-        toast({ title: 'Welcome back!' });
-        onAuthSuccess?.();
-      }
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) throw error;
+      
+      toast({ title: 'Welcome back!' });
+      onAuthSuccess?.();
     } catch (err: any) {
       setError(err.message || 'Authentication failed');
     } finally {
@@ -110,7 +76,7 @@ export const CustomAuth: React.FC<CustomAuthProps> = ({ onAuthSuccess }) => {
         <div className="text-center">
           <h1 className="text-2xl font-semibold">Linque Admin</h1>
           <p className="text-sm text-muted-foreground mt-2">
-            {isSignUp ? 'Create your admin account' : 'Sign in to manage your website'}
+            Sign in to manage your website content
           </p>
         </div>
 
@@ -120,7 +86,7 @@ export const CustomAuth: React.FC<CustomAuthProps> = ({ onAuthSuccess }) => {
             <Input
               id="email"
               type="email"
-              placeholder="etoure33@gmail.com"
+              placeholder="your-email@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -173,52 +139,26 @@ export const CustomAuth: React.FC<CustomAuthProps> = ({ onAuthSuccess }) => {
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isSignUp ? 'Creating account...' : 'Signing in...'}
+                Signing in...
               </>
             ) : (
-              isSignUp ? 'Create Account' : 'Sign In'
+              'Sign In'
             )}
           </Button>
         </form>
 
         <div className="space-y-3">
-          {/* Only show sign up during initial setup */}
-          {allowSignUp && (
-            <div className="text-center">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsSignUp(!isSignUp)}
-                disabled={isLoading}
-              >
-                {isSignUp 
-                  ? 'Already have an account? Sign in' 
-                  : 'Initial setup? Create admin account'
-                }
-              </Button>
-            </div>
-          )}
-
-          {!isSignUp && (
-            <div className="text-center">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleForgotPassword}
-                disabled={isLoading}
-              >
-                Forgot password?
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <div className="text-xs text-center text-muted-foreground">
-          <p>Your admin credentials:</p>
-          <p className="font-mono">etoure33@gmail.com</p>
-          <p className="font-mono">HelloWorld2025</p>
+          <div className="text-center">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleForgotPassword}
+              disabled={isLoading}
+            >
+              Forgot password?
+            </Button>
+          </div>
         </div>
       </div>
     </Card>

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import logoBlue from "@/assets/linque_logo_blue-removebg.png";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -22,7 +23,7 @@ const Header = () => {
     { path: "/services", label: "Services" },
     { path: "/jobs", label: "Careers" },
     { path: "/contact", label: "Contact Us" },
-    { path: "/resources", label: "Blog/Resources" },
+    { path: "/linque-learn", label: "Linque Learn" },
   ];
 
   const scheduleUrl =
@@ -44,9 +45,18 @@ const Header = () => {
           isScrolled ? "h-14" : "h-16"
         }`}>
           <Link to="/" className="flex items-center space-x-2">
-            <span className="text-2xl font-bold bg-gradient-hero bg-clip-text text-transparent">
+            {/* <span className="text-2xl font-bold bg-gradient-hero bg-clip-text text-transparent">
               Linque Resourcing
-            </span>
+            </span> */}
+            <div className="flex h-16 items-center md:h-20">
+              <img
+                src={logoBlue}
+                alt="Linque Resourcing"
+                className="h-full w-auto object-contain"
+                style={{ clipPath: "inset(3% 0% 3% 1.5%)" }}
+                loading="lazy"
+              />
+            </div>
           </Link>
 
           {/* Desktop Navigation */}
