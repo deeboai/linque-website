@@ -1,16 +1,44 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Target, TrendingUp, Award } from "lucide-react";
+import { Users, Target, TrendingUp, Award, ClipboardList } from "lucide-react";
 import heroVideo from "@/assets/YTDown.com_YouTube_Office-Stock-Footage-People-Working-As-A_Media_TUvpL_Hx0is_001_1080p.mp4";
 import promoVideo from "@/assets/website_final.mp4";
 import heroFallbackImage from "@/assets/hero-team-DOfHooPV.jpg";
 import AnimatedSection from "@/components/AnimatedSection";
 import ScribbleHighlight from "@/components/ScribbleHighlight";
-import AnimatedCounter from "@/components/AnimatedCounter";
-import LogoCarousel from "@/components/LogoCarousel";
-import TestimonialCarousel from "@/components/TestimonialCarousel";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+
+const CredlyBadge = ({ badgeId }: { badgeId: string }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    container.innerHTML = "";
+
+    const badgeRoot = document.createElement("div");
+    badgeRoot.setAttribute("data-iframe-width", "150");
+    badgeRoot.setAttribute("data-iframe-height", "270");
+    badgeRoot.setAttribute("data-share-badge-id", badgeId);
+    badgeRoot.setAttribute("data-share-badge-host", "https://www.credly.com");
+    container.appendChild(badgeRoot);
+
+    const script = document.createElement("script");
+    script.src = "https://cdn.credly.com/assets/utilities/embed.js";
+    script.async = true;
+    container.appendChild(script);
+
+    return () => {
+      container.innerHTML = "";
+    };
+  }, [badgeId]);
+
+  return <div ref={containerRef} className="mx-auto w-[150px]" />;
+};
 
 const Home = () => {
   const [scrollY, setScrollY] = useState(0);
@@ -25,6 +53,48 @@ const Home = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const impactParagraphs = [
+    "At Linque Resourcing, we understand that people are the heart of any organization, and our mission is to empower businesses to thrive by optimizing their most valuable asset: their workforce. With a team of seasoned professionals, we bring together 20 years of industry experience and offer comprehensive consulting services tailored to meet the unique needs of your organization. What sets us apart is our commitment to forging strong, lasting partnerships with our clients. We don't just provide solutions; we create impact by collaborating with you to understand your challenges and goals, ensuring that our strategies align with your organizational vision.",
+  ];
+  const impactHighlight = "People-first partnerships that transform teams, strengthen culture, and accelerate results.";
+  const impactQuestion = "Are you ready to embark on a journey to cultivate a workplace where talent thrives, businesses flourish, and visions become reality?";
+  const impactClosing = "Let us be your link to smarter people solutions!";
+
+  const valuePropositions = [
+    {
+      icon: Users,
+      title: "20+ Years Experience",
+      description: "Industry-leading expertise in talent management solutions.",
+      delay: 0,
+    },
+    {
+      icon: Target,
+      title: "Strategic Approach",
+      description: "Data-driven solutions aligned with your business goals.",
+      delay: 100,
+    },
+    {
+      icon: TrendingUp,
+      title: "Lasting Impact",
+      description: "People-centered strategies that drive sustainable growth.",
+      delay: 200,
+    },
+    {
+      icon: Award,
+      title: "Proven Results",
+      description: "Trusted by organizations to build thriving workplaces.",
+      delay: 300,
+    },
+    {
+      icon: ClipboardList,
+      title: "Project Management Excellence",
+      description: "Certified in PMP and Scrum, we bring structure, clarity, and accountability to every engagement, delivering on time and within scope.",
+      delay: 400,
+      centerContent: true,
+      credlyBadgeId: "e05ac079-ad47-4984-9fd5-ec6269232b92",
+    },
+  ];
 
   return (
     <div className="min-h-screen">
@@ -110,30 +180,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Stats Section */}
-      <AnimatedSection>
-        <section className="py-20 bg-background relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-mesh opacity-30" />
-          <div className="container mx-auto px-4 relative">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-5xl mx-auto">
-              {[
-                { value: 10, suffix: "+", label: "Years Experience" },
-                { value: 500, suffix: "+", label: "Clients Served" },
-                { value: 1000, suffix: "+", label: "Placements Made" },
-                { value: 98, suffix: "%", label: "Success Rate" },
-              ].map((stat, index) => (
-                <div key={index} className="text-center">
-                  <div className="text-4xl md:text-5xl font-bold text-primary mb-2">
-                    <AnimatedCounter end={stat.value} suffix={stat.suffix} />
-                  </div>
-                  <div className="text-muted-foreground font-medium">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      </AnimatedSection>
-
       {/* Video Section */}
       <AnimatedSection animation="fade-in">
         <section className="py-20 bg-gradient-subtle">
@@ -143,7 +189,7 @@ const Home = () => {
                 Discover What We Do
               </h2>
               <p className="text-center text-muted-foreground mb-12 text-lg">
-                See how we're transforming HR for businesses worldwide
+                See how we're creating value for businesses worldwide
               </p>
               <div className="relative aspect-video overflow-hidden rounded-2xl border border-white/30 bg-muted shadow-elegant hover-lift transition-all duration-500 hover:shadow-glow">
                 {isPromoVideoAvailable ? (
@@ -178,6 +224,31 @@ const Home = () => {
         </section>
       </AnimatedSection>
 
+      {/* Our Impact */}
+      <section className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <AnimatedSection className="mb-12 text-center space-y-4">
+            <h2 className="text-4xl md:text-5xl font-bold">Our Impact</h2>
+            <p className="text-lg md:text-xl text-foreground/80 italic">
+              {impactHighlight}
+            </p>
+          </AnimatedSection>
+          <AnimatedSection animation="fade-in-up" className="max-w-4xl mx-auto space-y-6 text-center">
+            {impactParagraphs.map((paragraph) => (
+              <p key={paragraph} className="text-lg md:text-xl leading-relaxed text-foreground/90">
+                {paragraph}
+              </p>
+            ))}
+            <p className="text-lg md:text-xl leading-relaxed text-foreground/90">
+              {impactQuestion}
+            </p>
+            <p className="text-lg md:text-xl font-semibold leading-relaxed text-foreground">
+              {impactClosing}
+            </p>
+          </AnimatedSection>
+        </div>
+      </section>
+
       {/* Value Propositions */}
       <section className="py-20">
         <div className="container mx-auto px-4">
@@ -190,77 +261,48 @@ const Home = () => {
             </p>
           </AnimatedSection>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {[
-              {
-                icon: Users,
-                title: "10+ Years Experience",
-                description: "Industry-leading expertise in HR consulting and talent solutions.",
-                delay: 0,
-              },
-              {
-                icon: Target,
-                title: "Strategic Approach",
-                description: "Data-driven solutions aligned with your business goals.",
-                delay: 100,
-              },
-              {
-                icon: TrendingUp,
-                title: "Lasting Impact",
-                description: "People-centered strategies that drive sustainable growth.",
-                delay: 200,
-              },
-              {
-                icon: Award,
-                title: "Proven Results",
-                description: "Trusted by organizations to build thriving workplaces.",
-                delay: 300,
-              },
-            ].map((item, index) => (
-              <AnimatedSection key={index} animation="fade-in-up" delay={item.delay}>
-                <Card className="h-full shadow-card hover:shadow-elegant transition-all duration-500 hover-lift group border-none bg-gradient-to-br from-background to-muted/20">
-                  <CardContent className="pt-8 pb-6 px-6">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-hero flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                      <item.icon className="w-8 h-8 text-white" />
+          <div className="grid gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {valuePropositions.slice(0, 4).map((item) => {
+                const Icon = item.icon;
+                return (
+                  <AnimatedSection key={item.title} animation="fade-in-up" delay={item.delay}>
+                    <Card className="group h-full border-none bg-gradient-to-br from-background to-muted/20 shadow-card transition-all duration-500 hover:shadow-elegant hover-lift">
+                      <CardContent className="flex flex-col gap-4 items-start px-6 pb-6 pt-8 text-left">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-hero transition-transform duration-300 group-hover:scale-110">
+                          <Icon className="h-8 w-8 text-white" />
+                        </div>
+                        <h3 className="text-xl font-semibold">{item.title}</h3>
+                        <p className="text-muted-foreground leading-relaxed">{item.description}</p>
+                      </CardContent>
+                    </Card>
+                  </AnimatedSection>
+                );
+              })}
+            </div>
+
+            <AnimatedSection animation="fade-in-up" delay={valuePropositions[4].delay}>
+              <Card className="group border-none bg-gradient-to-br from-background to-muted/20 shadow-card transition-all duration-500 hover:shadow-elegant hover-lift">
+                <CardContent className="flex flex-col gap-6 px-6 pb-6 pt-8 md:flex-row md:items-center md:justify-between">
+                  <div className="flex w-full flex-col items-center gap-4 text-center md:max-w-xl md:items-start md:text-left md:flex-1">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-hero transition-transform duration-300 group-hover:scale-110">
+                      <ClipboardList className="w-8 h-8 text-white" />
                     </div>
-                    <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
-                    <p className="text-muted-foreground leading-relaxed">{item.description}</p>
-                  </CardContent>
-                </Card>
-              </AnimatedSection>
-            ))}
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-semibold">{valuePropositions[4].title}</h3>
+                      <p className="text-muted-foreground leading-relaxed">{valuePropositions[4].description}</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-center md:justify-end">
+                    <CredlyBadge badgeId={valuePropositions[4].credlyBadgeId} />
+                  </div>
+                </CardContent>
+              </Card>
+            </AnimatedSection>
           </div>
         </div>
       </section>
 
-      {/* Partners Carousel */}
-      <AnimatedSection>
-        <section className="py-20 bg-muted/30">
-          <div className="container mx-auto px-4">
-            <h3 className="text-3xl font-bold text-center mb-12">
-              Trusted by Leading Organizations
-            </h3>
-            <LogoCarousel />
-          </div>
-        </section>
-      </AnimatedSection>
-
-      {/* Testimonials */}
-      <AnimatedSection>
-        <section className="py-20">
-          <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto">
-              <h2 className="text-4xl md:text-5xl font-bold text-center mb-4">
-                What Our Clients Say
-              </h2>
-              <p className="text-center text-muted-foreground mb-12 text-lg">
-                Real results from real partnerships
-              </p>
-              <TestimonialCarousel />
-            </div>
-          </div>
-        </section>
-      </AnimatedSection>
 
       {/* CTA Section */}
       <AnimatedSection>

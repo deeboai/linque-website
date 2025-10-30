@@ -64,7 +64,7 @@ The app reads optional variables from `.env` files (create `.env.local` for loca
 | `VITE_SITE_URL` | Canonical site URL used for SEO `<link rel="canonical">` and structured data. | `https://linqueresourcing.com` |
 | `VITE_SCHEDULER_URL` | External scheduling link for CTAs (`Schedule a Call`). | `/contact` fallback |
 | `VITE_DISCOVERY_CALL_URL` | Optional discovery call link. | `https://cal.com/linque/discovery` |
-| `VITE_CONTACT_ENDPOINT` | API endpoint used by the contact form. When absent, the form simulates a short delay. | `undefined` |
+| `VITE_CONTACT_ENDPOINT` | Optional legacy API endpoint for the contact form. When omitted the form opens the user's mail client via `mailto`. | `undefined` |
 | `VITE_SUPABASE_URL` | Supabase project URL used by the CMS backend. | `undefined` |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon/public API key. Required for both the public site and the admin UI. | `undefined` |
 
@@ -104,6 +104,8 @@ LinQue/
 └── package.json
 ```
 
+Each major directory also includes a README detailing its purpose and notable files.
+
 ---
 
 ## Routes & Feature Overview
@@ -114,11 +116,11 @@ LinQue/
 | `/about` | `pages/About.tsx` | Company story, leadership modules, timeline animations. |
 | `/how-we-work` | `pages/HowWeWork.tsx` | Scroll-linked timeline with IntersectionObserver, principle cards, scheduler CTA. |
 | `/services` | `pages/Services.tsx` | Updated service taxonomy, interactive tabs, highlight cards, hero illustration, “Work with us” CTA. |
-| `/resources` | `pages/Resources.tsx` | Filterable / paginated blog grid, lazy images, structured data. |
-| `/resources/:slug` | `pages/ResourceDetail.tsx` | Rich article detail layout with sticky TOC, share-ready SEO metadata. |
+| `/linque-learn` | `pages/Resources.tsx` | Filterable / paginated blog grid, lazy images, structured data. |
+| `/linque-learn/:slug` | `pages/ResourceDetail.tsx` | Rich article detail layout with sticky TOC, share-ready SEO metadata. |
 | `/jobs` | `pages/Jobs.tsx` | Filterable job board powered by sample data (`data/jobs.ts`). |
 | `/jobs/:slug` | `pages/JobDetail.tsx` | Job detail view with structured data and apply CTA. |
-| `/contact` | `pages/Contact.tsx` | Validated contact form (react-hook-form + zod), success/failure toasts, scheduler/discovery CTAs. |
+| `/contact` | `pages/Contact.tsx` | Validated contact form that now opens the visitor's mail client with prefilled details, plus scheduler/discovery CTAs. |
 | `*` | `pages/NotFound.tsx` | Friendly 404 fallback. |
 
 Routes are registered in `src/App.tsx` using `react-router-dom`.
@@ -133,7 +135,7 @@ Routes are registered in `src/App.tsx` using `react-router-dom`.
 - **`components/LazyImage.tsx`** – IntersectionObserver + optional parallax + blur-up placeholder for performance-sensitive imagery.
 - **`components/Seo.tsx`** – Thin client-side helper that manages meta tags, Open Graph data, Twitter cards, canonical URLs, and structured data.
 - **`hooks/usePrefersReducedMotion.ts`** – Media query helper to adjust animations automatically.
-- **`data/posts.ts` / `data/jobs.ts`** – Content sources for the Resources and Jobs sections. Update these to change copy, categories, tags, or job details.
+- **`data/posts.ts` / `data/jobs.ts`** – Content sources for the Linque Learn and Jobs sections. Update these to change copy, categories, tags, or job details.
 
 ---
 
@@ -198,6 +200,11 @@ Create two tables in Supabase (`posts` and `jobs`) with the following columns (a
 | `department` | text | |
 | `remote_type` | text | Remote/Hybrid/Onsite |
 | `summary` | text | |
+
+### Contact form delivery
+
+By default the contact form opens the visitor's mail client using a prefilled `mailto:` link so their message is sent straight to `info@linqueresourcing.com`. The payload includes the subject, message, name, company, and work email. If you prefer server-side delivery, provide `VITE_CONTACT_ENDPOINT` and restore the API handler in `src/pages/Contact.tsx`.
+
 | `description` | text | |
 | `responsibilities` | text[] or jsonb | Array of bullet points |
 | `qualifications` | text[] or jsonb | Array of bullet points |

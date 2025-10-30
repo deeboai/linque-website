@@ -10,14 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import { Mail, Phone, MapPin, CalendarDays, Loader2, Linkedin } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Mail, Phone, MapPin, CalendarDays, Loader2, Linkedin, Facebook, Instagram } from "lucide-react";
 
 const contactSchema = z.object({
-  name: z.string().min(2, "Please enter your full name."),
-  email: z.string().email("Enter a valid email address."),
-  company: z.string().min(2, "Share your company or organization."),
-  message: z.string().min(12, "Let us know how we can help."),
+  name: z.string().min(2, "Share your full name so we know who to follow up with."),
+  email: z.string().email("Enter a work email where we can reach you."),
+  company: z.string().min(2, "Tell us which company or organization you represent."),
+  subject: z.string().min(3, "Add a subject to give our team quick context."),
+  message: z.string().min(3, "Let us know how we can help or what outcome you are targeting."),
 });
 
 type ContactFormValues = z.infer<typeof contactSchema>;
@@ -32,6 +32,7 @@ const Contact = () => {
       name: "",
       email: "",
       company: "",
+      subject: "",
       message: "",
     },
   });
@@ -42,40 +43,30 @@ const Contact = () => {
   const contactEndpoint = import.meta.env.VITE_CONTACT_ENDPOINT;
 
   const onSubmit = async (values: ContactFormValues) => {
-    try {
-      setIsSubmitting(true);
-      if (contactEndpoint) {
-        const response = await fetch(contactEndpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(values),
-        });
+    setIsSubmitting(true);
 
-        if (!response.ok) {
-          throw new Error("Request failed");
-        }
-      } else {
-        // Simulate latency to keep the micro-interaction consistent.
-        await new Promise((resolve) => setTimeout(resolve, 650));
-      }
+    const mailtoSubject = encodeURIComponent(values.subject.trim());
+    const bodyLines = [
+      values.message.trim(),
+      "",
+      "—",
+      `Name: ${values.name.trim()}`,
+      `Work email: ${values.email.trim()}`,
+      `Company: ${values.company.trim()}`,
+    ];
+    const mailtoBody = encodeURIComponent(bodyLines.join("\n"));
 
-      toast({
-        title: "Message sent",
-        description: "Thanks for reaching out! A Linque consultant will reply within one business day.",
-      });
-      form.reset();
-    } catch (error) {
-      console.error(error);
-      toast({
-        title: "Unable to send message",
-        description: "Please try again or email info@linqueresourcing.com.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+    const mailtoUrl = `mailto:info@linqueresourcing.com?subject=${mailtoSubject}&body=${mailtoBody}`;
+
+    window.location.href = mailtoUrl;
+
+    toast({
+      title: "Opening your email app",
+      description: "If nothing appears, email info@linqueresourcing.com directly.",
+    });
+
+    form.reset();
+    setIsSubmitting(false);
   };
 
   return (
@@ -203,6 +194,24 @@ const Contact = () => {
                 </div>
 
                 <div className="space-y-2">
+                  <label htmlFor="subject" className="text-sm font-medium text-foreground">
+                    Subject
+                  </label>
+                  <Input
+                    id="subject"
+                    placeholder="Let’s align on your people strategy"
+                    aria-invalid={!!form.formState.errors.subject}
+                    aria-describedby={form.formState.errors.subject ? "subject-error" : undefined}
+                    {...form.register("subject")}
+                  />
+                  {form.formState.errors.subject && (
+                    <p id="subject-error" role="alert" className="text-sm text-destructive">
+                      {form.formState.errors.subject.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
                   <label htmlFor="message" className="text-sm font-medium text-foreground">
                     How can we partner together?
                   </label>
@@ -234,31 +243,7 @@ const Contact = () => {
               </form>
             </AnimatedSection>
 
-            <AnimatedSection animation="fade-in-up" delay={80} className="space-y-6">
-              <Card className="border-none bg-muted/40 shadow-card">
-                <CardContent className="space-y-6 pt-8">
-                  <h2 className="text-2xl font-semibold text-foreground">How we support you</h2>
-                  <p className="text-muted-foreground">
-                    Share a project, ongoing HR need, or upcoming transformation. We tailor every engagement to your
-                    people, culture, and operational realities.
-                  </p>
-                  <ul className="space-y-3 text-sm text-muted-foreground">
-                    <li className="flex items-start gap-3">
-                      <span className="mt-1 text-primary">•</span>
-                      Advisory for transformation, M&A, and strategic planning
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="mt-1 text-primary">•</span>
-                      Fractional HR, talent, and operations leadership
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <span className="mt-1 text-primary">•</span>
-                      Talent acquisition, recruitment marketing, and onboarding
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
-
+            <AnimatedSection animation="fade-in-up" delay={80}>
               <div className="rounded-3xl border border-muted/60 bg-gradient-to-br from-background to-muted/40 p-8 shadow-card">
                 <h3 className="text-lg font-semibold text-foreground">Contact information</h3>
                 <div className="mt-6 space-y-5 text-sm text-muted-foreground">
@@ -309,6 +294,38 @@ const Contact = () => {
                         className="text-muted-foreground hover:text-primary transition-colors"
                       >
                         Linque Resourcing
+                      </a>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="rounded-full bg-primary/10 p-2 text-primary">
+                      <Facebook className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <div>
+                      <p className="font-semibold text-foreground">Facebook</p>
+                      <a
+                        href="https://www.facebook.com/profile.php?id=61575220193345&mibextid=wwXlfR&rdid=VbnVloZ9ockeyFMG&share_url=https%3A%2F%2Fwww.facebook.com%2Fshare%2F1FiE8TXJKE%2F%3Fmibextid%3DwwXlfR"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="text-muted-foreground transition-colors hover:text-primary"
+                      >
+                        facebook.com/LinqueResourcing
+                      </a>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <span className="rounded-full bg-primary/10 p-2 text-primary">
+                      <Instagram className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <div>
+                      <p className="font-semibold text-foreground">Instagram</p>
+                      <a
+                        href="https://www.instagram.com/linque_resourcing/"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="text-muted-foreground transition-colors hover:text-primary"
+                      >
+                        @linque_resourcing
                       </a>
                     </div>
                   </div>
