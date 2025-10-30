@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Facebook, Instagram, Linkedin, Mail, Phone } from "lucide-react";
+import logoBlue from "@/assets/linque_logo_blue-removebg.png";
 
 const navLinks = [
   { path: "/", label: "Home" },
@@ -7,7 +8,7 @@ const navLinks = [
   { path: "/services", label: "Services" },
   { path: "/jobs", label: "Careers" },
   { path: "/contact", label: "Contact Us" },
-  { path: "/resources", label: "Blog/Resources" },
+  { path: "/linque-learn", label: "Linque Learn" },
 ];
 
 const Footer = () => {
@@ -16,8 +17,19 @@ const Footer = () => {
       <div className="container mx-auto px-4 py-12">
         <div className="grid gap-10 md:grid-cols-[minmax(0,1.2fr),minmax(0,1fr)] lg:grid-cols-[minmax(0,1.1fr),minmax(0,1fr),minmax(0,1fr)]">
           <div className="space-y-5">
-            <Link to="/" className="block text-2xl font-bold bg-gradient-hero bg-clip-text text-transparent">
-              Linque Resourcing
+            <Link to="/" className="block">
+              {/* <span className="text-2xl font-bold bg-gradient-hero bg-clip-text text-transparent">
+                Linque Resourcing
+              </span> */}
+              <div className="flex h-16 items-center md:h-20">
+                <img
+                  src={logoBlue}
+                  alt="Linque Resourcing"
+                  className="h-full w-auto object-contain"
+                  style={{ clipPath: "inset(3% 0% 3% 1.5%)" }}
+                  loading="lazy"
+                />
+              </div>
             </Link>
             <p className="max-w-xs text-sm text-muted-foreground">
               Linque Resourcing is your partner for people-centered strategy, talent, and operations support.

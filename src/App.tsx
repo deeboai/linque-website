@@ -8,7 +8,7 @@ import Home from "./pages/Home";
 import About from "./pages/About";
 import HowWeWork from "./pages/HowWeWork";
 import Services from "./pages/Services";
-import Resources from "./pages/Resources";
+import LinqueLearn from "./pages/Resources";
 import ResourceDetail from "./pages/ResourceDetail";
 import Jobs from "./pages/Jobs";
 import JobDetail from "./pages/JobDetail";
@@ -30,8 +30,8 @@ const App = () => (
             <Route path="/about" element={<About />} />
             <Route path="/how-we-work" element={<HowWeWork />} />
             <Route path="/services" element={<Services />} />
-            <Route path="/resources" element={<Resources />} />
-            <Route path="/resources/:slug" element={<ResourceDetail />} />
+            <Route path="/linque-learn" element={<LinqueLearn />} />
+            <Route path="/linque-learn/:slug" element={<ResourceDetail />} />
             <Route path="/jobs" element={<Jobs />} />
             <Route path="/jobs/:slug" element={<JobDetail />} />
             <Route path="/contact" element={<Contact />} />

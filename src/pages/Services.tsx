@@ -14,10 +14,9 @@ import {
 } from "lucide-react";
 import AnimatedSection from "@/components/AnimatedSection";
 import ScribbleHighlight from "@/components/ScribbleHighlight";
-import LazyImage from "@/components/LazyImage";
 import Seo from "@/components/Seo";
 import { buildCanonicalUrl } from "@/lib/seo";
-import heroImage from "@/assets/10_MARKETPLACE_SHOT_5_0862_02_QC.webp";
+import heroImage from "@/assets/christina-wocintechchat-com-KAULAzQwxzE-unsplash.jpg";
 import {
   Accordion,
   AccordionContent,
@@ -132,48 +131,43 @@ const Services = () => {
         }}
       />
 
-      <section className="relative overflow-hidden bg-gradient-subtle py-24">
-        <div className="absolute inset-0 bg-gradient-mesh opacity-25" aria-hidden="true" />
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="grid gap-12 lg:grid-cols-[1.1fr,0.9fr] lg:items-center">
-            <AnimatedSection animation="slide-in-left" className="space-y-6">
-              <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-semibold text-primary">
+      <section className="relative flex min-h-[70vh] items-center overflow-hidden">
+        <div className="absolute inset-0">
+          <img
+            src={heroImage}
+            alt="Strategic HR consultants collaborating on people operations"
+            className="h-full w-full object-cover"
+            loading="eager"
+          />
+          <div className="absolute inset-0 bg-slate-900/70" />
+        </div>
+        <AnimatedSection animation="slide-in-left" className="relative z-10 w-full">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl space-y-6 text-white">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-1 text-sm font-semibold text-white">
                 People-first expertise
               </span>
-              <h1 className="text-4xl md:text-5xl font-bold leading-tight">
+              <h1 className="text-4xl md:text-5xl font-bold leading-tight drop-shadow-lg">
                 Services that connect{" "}
                 <ScribbleHighlight>people strategy</ScribbleHighlight> to business outcomes.
               </h1>
-              <p className="text-lg text-muted-foreground leading-relaxed">
+              <p className="text-lg leading-relaxed text-white/80">
                 From advisory to execution, we blend strategy, talent, technology, and fractional support so HR teams can
                 deliver measurable impact.
               </p>
               <div className="flex flex-wrap gap-3">
-                <Button size="lg" asChild>
+                <Button size="lg" asChild className="bg-white text-primary hover:bg-white/90">
                   <Link to="/contact">Work With Us</Link>
                 </Button>
-                <Button size="lg" variant="outline" asChild>
+                <Button size="lg" asChild className="bg-white text-primary hover:bg-white/90">
                   <a href={scheduleUrl} target="_blank" rel="noreferrer noopener">
                     Schedule a Call
                   </a>
                 </Button>
               </div>
-            </AnimatedSection>
-            <AnimatedSection animation="slide-in-right">
-              <div className="relative">
-                <div className="absolute -inset-6 rounded-[2.5rem] bg-gradient-hero/40 blur-3xl" aria-hidden="true" />
-                <LazyImage
-                  src={heroImage}
-                  alt="Strategic HR consultants collaborating on people operations"
-                  wrapperClassName="overflow-hidden rounded-[2.5rem] border border-white/60 bg-white/70 shadow-elegant"
-                  className="rounded-[2.5rem]"
-                  enableParallax
-                  parallaxStrength={16}
-                />
-              </div>
-            </AnimatedSection>
+            </div>
           </div>
-        </div>
+        </AnimatedSection>
       </section>
 
       <section className="py-20">

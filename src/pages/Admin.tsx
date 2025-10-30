@@ -151,21 +151,71 @@ const Admin = () => {
 
   useEffect(() => {
     if (!supabase) return;
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    
+    // Get initial session
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) {
+        console.error('Session check error:', error);
+        setSession(null);
+      } else {
+        console.log('Initial session:', data.session ? 'Found' : 'None');
+        setSession(data.session);
+      }
       setAuthChecked(true);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    
+    // Listen for auth changes
+    const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log('Auth state change:', event, newSession ? 'Session exists' : 'No session');
       setSession(newSession);
       setAuthChecked(true);
     });
+    
     return () => listener?.subscription.unsubscribe();
   }, []);
 
   const handleSignOut = async () => {
     if (!supabase) return;
-    await supabase.auth.signOut();
-    toast({ title: "Signed out" });
+    try {
+      console.log('Starting sign out process...');
+      
+      // Force sign out with global scope to invalidate all sessions
+      await supabase.auth.signOut({ scope: 'global' });
+      
+      // Manually clear all Supabase data from localStorage
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.includes('supabase')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      
+      // Also clear sessionStorage
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.includes('supabase')) {
+          sessionStorage.removeItem(key);
+        }
+      }
+      
+      // Manually clear session state
+      setSession(null);
+      setAuthChecked(true);
+      
+      console.log('Sign out complete, storage cleared');
+      toast({ title: "Signed out successfully" });
+      
+      // Force page reload with cache bypass for Arc/Chrome browsers
+      setTimeout(() => {
+        // Try cache-busting reload first
+        window.location.href = window.location.href + '?_t=' + Date.now();
+      }, 100);
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast({ title: "Error signing out", variant: "destructive" });
+    }
   };
 
   if (!isSupabaseConfigured) {
@@ -332,7 +382,7 @@ const PostsManager = () => {
                   <Badge variant={post.status === "published" ? "default" : "secondary"}>{post.status}</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
-                  /resources/{post.slug} ·{" "}
+                  /linque-learn/{post.slug} ·{" "}
                   {post.publishedAt ? `Published ${new Date(post.publishedAt).toLocaleDateString()}` : "Not scheduled"}
                 </p>
               </div>
@@ -533,7 +583,7 @@ const PostDialog = ({ open, onOpenChange, post, submitting, onSubmit }: PostDial
             <div>
               <DialogTitle>{post ? "Edit post" : "Create post"}</DialogTitle>
               <DialogDescription>
-                Published posts appear automatically on the Resources page. Drafts remain private until published.
+                Published posts appear automatically on the Linque Learn page. Drafts remain private until published.
               </DialogDescription>
             </div>
             <Button 

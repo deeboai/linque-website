@@ -18,8 +18,8 @@ const truncate = (text: string, limit: number) => {
   return `${text.slice(0, limit).replace(/\s+\S*$/, "")}…`;
 };
 
-const Resources = () => {
-  const canonicalUrl = useMemo(() => buildCanonicalUrl("/resources"), []);
+const LinqueLearn = () => {
+  const canonicalUrl = useMemo(() => buildCanonicalUrl("/linque-learn"), []);
   const [visibleCount, setVisibleCount] = useState(INITIAL_POST_COUNT);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("All");
@@ -68,19 +68,19 @@ const Resources = () => {
   return (
     <div className="min-h-screen bg-background">
       <Seo
-        title="Resources & Insights | Linque Resourcing"
-        description="Stay ahead with curated HR insights from Linque Resourcing covering digital transformation, workforce planning, culture, compliance, and talent strategy."
+        title="Linque Learn | People Strategy Insights"
+        description="Stay ahead with curated HR insights from Linque Learn covering digital transformation, workforce planning, culture, compliance, and talent strategy."
         canonicalUrl={canonicalUrl}
         openGraph={{
-          title: "Resources & Insights | Linque Resourcing",
+          title: "Linque Learn | People Strategy Insights",
           description:
-            "Explore the latest HR and people operations insights from Linque Resourcing—digital transformation, workforce planning, and talent strategy.",
+            "Explore the latest HR and people operations insights from Linque Learn—digital transformation, workforce planning, and talent strategy.",
           url: canonicalUrl,
         }}
         structuredData={{
           "@context": "https://schema.org",
           "@type": "Blog",
-          name: "Linque Resourcing Insights",
+          name: "Linque Learn",
           description:
             "Expert perspectives on HR strategy, learning and development, compliance, and talent experience from Linque Resourcing consultants.",
           url: canonicalUrl,
@@ -93,7 +93,7 @@ const Resources = () => {
         <div className="container mx-auto px-4 relative z-10">
           <AnimatedSection animation="slide-in-left" className="max-w-3xl space-y-6">
             <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-medium text-primary">
-              Resources
+              Linque Learn
             </span>
             <h1 className="text-4xl md:text-5xl font-bold leading-tight">
               HR insights that{" "}
@@ -150,7 +150,7 @@ const Resources = () => {
               {displayedPosts.map((post, index) => (
               <AnimatedSection key={post.slug} animation="fade-in-up" delay={index * 50}>
                 <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-muted/60 bg-white/80 shadow-card transition hover-lift hover:shadow-elegant">
-                  <Link to={`/resources/${post.slug}`} className="block focus-visible:outline-none">
+                    <Link to={`/linque-learn/${post.slug}`} className="block focus-visible:outline-none">
                     <LazyImage
                       src={post.heroImage}
                       alt={post.title}
@@ -174,7 +174,7 @@ const Resources = () => {
                         {post.readTimeMinutes ?? 5} min read
                       </span>
                     </div>
-                    <Link to={`/resources/${post.slug}`}>
+                    <Link to={`/linque-learn/${post.slug}`}>
                       <h3 className="text-xl font-semibold leading-tight transition group-hover:text-primary">
                         {post.title}
                       </h3>
@@ -191,7 +191,7 @@ const Resources = () => {
                         ))}
                       </div>
                       <Link
-                        to={`/resources/${post.slug}`}
+                        to={`/linque-learn/${post.slug}`}
                         className="text-sm font-semibold text-primary transition hover:gap-2 inline-flex items-center gap-1"
                         aria-label={`Read more: ${post.title}`}
                       >
@@ -231,4 +231,4 @@ const Resources = () => {
   );
 };
 
-export default Resources;
+export default LinqueLearn;
