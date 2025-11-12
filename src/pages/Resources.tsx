@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Loader2, Tag } from "lucide-react";
 import { usePosts } from "@/hooks/useContent";
+import defaultBlogImage from "@/assets/blog-digital-transformation.svg";
 
 const INITIAL_POST_COUNT = 6;
 
@@ -26,14 +27,17 @@ const LinqueLearn = () => {
   const { data: posts = [], isLoading } = usePosts();
   const jsonLdPosts = useMemo(
     () =>
-      posts.map((post) => ({
-        "@type": "BlogPosting",
-        headline: post.title,
-        image: post.heroImage,
-        datePublished: post.publishedAt ?? undefined,
-        url: `${canonicalUrl}/${post.slug}`,
-        description: post.description,
-      })),
+      posts.map((post) => {
+        const heroImage = post.heroImage || defaultBlogImage;
+        return {
+          "@type": "BlogPosting",
+          headline: post.title,
+          image: heroImage,
+          datePublished: post.publishedAt ?? undefined,
+          url: `${canonicalUrl}/${post.slug}`,
+          description: post.description,
+        };
+      }),
     [posts, canonicalUrl],
   );
 
@@ -152,7 +156,7 @@ const LinqueLearn = () => {
                 <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-muted/60 bg-white/80 shadow-card transition hover-lift hover:shadow-elegant">
                     <Link to={`/linque-learn/${post.slug}`} className="block focus-visible:outline-none">
                     <LazyImage
-                      src={post.heroImage}
+                      src={post.heroImage || defaultBlogImage}
                       alt={post.title}
                       wrapperClassName="aspect-[4/3] overflow-hidden"
                       className="object-cover"
