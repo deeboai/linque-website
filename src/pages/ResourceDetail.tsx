@@ -1,7 +1,6 @@
 import { format } from "date-fns";
 import { Link, Navigate, useParams } from "react-router-dom";
 import AnimatedSection from "@/components/AnimatedSection";
-import LazyImage from "@/components/LazyImage";
 import ScribbleHighlight from "@/components/ScribbleHighlight";
 import Seo from "@/components/Seo";
 import { buildCanonicalUrl } from "@/lib/seo";
@@ -10,6 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Calendar, Clock, ChevronLeft, Loader2 } from "lucide-react";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { usePost } from "@/hooks/useContent";
+import defaultBlogImage from "@/assets/blog-digital-transformation.svg";
+
+const paragraphDelimiter = /\r?\n\s*\r?\n/;
+const inlineBreakPattern = /\s*\n\s*/g;
+
+const splitContentParagraphs = (body: string[] = []) =>
+  body
+    .flatMap((entry) => entry.split(paragraphDelimiter))
+    .map((paragraph) => paragraph.replace(inlineBreakPattern, " ").trim())
+    .filter(Boolean);
 
 const ResourceDetail = () => {
   const { slug } = useParams();
@@ -33,6 +42,8 @@ const ResourceDetail = () => {
   }
 
   const canonicalUrl = buildCanonicalUrl(`/linque-learn/${post.slug}`);
+  const heroImage = post.heroImage || defaultBlogImage;
+  const summaryText = post.excerpt?.trim();
   const headings = post.content
     .map((section, index) => ({
       id: section.heading ? `${post.slug}-section-${index}` : null,
@@ -59,7 +70,7 @@ const ResourceDetail = () => {
           title: post.title,
           description: post.description,
           url: canonicalUrl,
-          image: post.heroImage,
+          image: heroImage,
           type: "article",
         }}
         structuredData={{
@@ -67,7 +78,7 @@ const ResourceDetail = () => {
           "@type": "BlogPosting",
           headline: post.title,
           abstract: post.excerpt,
-          image: post.heroImage,
+          image: heroImage,
           author: {
             "@type": "Organization",
             name: "Linque Resourcing",
@@ -79,8 +90,13 @@ const ResourceDetail = () => {
         }}
       />
 
-      <section className="relative overflow-hidden bg-gradient-subtle pb-16 pt-20">
-        <div className="absolute inset-0 bg-gradient-mesh opacity-30" aria-hidden="true" />
+      <section className="relative overflow-hidden pb-14 pt-28">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          aria-hidden="true"
+          style={{ backgroundImage: `url(${heroImage})` }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/70 to-background/95" aria-hidden="true" />
         <div className="container mx-auto px-4 relative z-10">
           <AnimatedSection animation="fade-in-up" className="space-y-6">
             <Button variant="ghost" asChild className="w-fit px-0 text-muted-foreground hover:text-primary">
@@ -105,31 +121,16 @@ const ResourceDetail = () => {
             <h1 className="text-4xl md:text-5xl font-bold leading-tight">
               <ScribbleHighlight>{post.title}</ScribbleHighlight>
             </h1>
-            <p className="max-w-3xl text-lg text-muted-foreground leading-relaxed">{post.description}</p>
+            {summaryText && <p className="max-w-3xl text-lg text-muted-foreground leading-relaxed">{summaryText}</p>}
           </AnimatedSection>
         </div>
       </section>
 
-      <section className="relative z-10">
+      <section className="pb-16 pt-6 md:pt-10">
         <div className="container mx-auto px-4">
-          <AnimatedSection animation="fade-in-up" className="-mt-20 overflow-hidden rounded-3xl border border-muted/60 bg-white/90 shadow-elegant">
-            <LazyImage
-              src={post.heroImage}
-              alt={post.title}
-              wrapperClassName="aspect-[16/9]"
-              className="object-cover"
-              enableParallax
-              parallaxStrength={14}
-            />
-          </AnimatedSection>
-        </div>
-      </section>
-
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="grid gap-12 lg:grid-cols-[260px,1fr]">
+          <div className="flex flex-col gap-10 lg:flex-row lg:items-start">
             {headings.length > 0 && (
-              <aside className="sticky top-28 self-start rounded-2xl border border-muted/80 bg-background/80 p-6 shadow-card backdrop-blur">
+              <aside className="lg:w-64 lg:flex-none sticky top-28 self-start rounded-2xl border border-muted/80 bg-background/80 p-6 shadow-card backdrop-blur">
                 <p className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">On this page</p>
                 <nav className="mt-4 space-y-2" aria-label="Article sections">
                   {headings.map((section) => (
@@ -145,13 +146,14 @@ const ResourceDetail = () => {
               </aside>
             )}
 
-            <article className="space-y-10 text-base leading-relaxed text-foreground/90 prose prose-slate max-w-none">
+            <article className="w-full max-w-3xl flex-1 space-y-10 text-base leading-relaxed text-foreground/90 prose prose-slate lg:ml-10 lg:mr-auto">
               {post.content.map((section, index) => {
                 const sectionId = section.heading ? `${post.slug}-section-${index}` : undefined;
+                const paragraphs = splitContentParagraphs(section.body ?? []);
                 return (
                   <div key={section.heading ?? index} id={sectionId} className="scroll-mt-32 space-y-4">
                     {section.heading && <h2 className="text-2xl font-semibold text-foreground">{section.heading}</h2>}
-                    {section.body.map((paragraph, paragraphIndex) => (
+                    {paragraphs.map((paragraph, paragraphIndex) => (
                       <p key={paragraphIndex} className="text-muted-foreground leading-relaxed">
                         {paragraph}
                       </p>

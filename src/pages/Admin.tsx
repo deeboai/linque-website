@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { type Session } from "@supabase/supabase-js";
 import { useForm, useFieldArray } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase, isSupabaseConfigured } from "@/lib/supabaseClient";
+import { uploadPostHeroImage, isHeroImageUploadEnabled } from "@/lib/storage";
 import {
   upsertPost,
   deletePost,
@@ -26,7 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Plus, Pencil, Trash, LogOut } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash, LogOut, ImagePlus } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Seo from "@/components/Seo";
 import { buildCanonicalUrl } from "@/lib/seo";
@@ -70,6 +71,11 @@ type JobFormValues = {
 };
 
 const defaultPostSection = { heading: "", body: "", bullets: "" };
+const HERO_IMAGE_MAX_SIZE_MB = 2;
+const HERO_IMAGE_ALLOWED_TYPES = ["image/jpeg", "image/png"];
+const HERO_IMAGE_ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png"];
+const PARAGRAPH_DELIMITER = /\r?\n\s*\r?\n/;
+const INLINE_BREAK_PATTERN = /\s*\n\s*/g;
 
 const slugify = (value: string) =>
   value
@@ -100,11 +106,23 @@ const parseTags = (value: string) =>
     .map((tag) => tag.trim())
     .filter(Boolean);
 
+const joinParagraphs = (body: string[] = []) =>
+  body
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .join("\n\n");
+
+const normalizeTextareaParagraphs = (text: string) =>
+  text
+    .split(PARAGRAPH_DELIMITER)
+    .map((paragraph) => paragraph.replace(INLINE_BREAK_PATTERN, " ").trim())
+    .filter(Boolean);
+
 const sectionsFromPost = (content: CMSPostSection[] = []) =>
   content.length
     ? content.map((section) => ({
         heading: section.heading ?? "",
-        body: (section.body ?? []).join("\n"),
+        body: joinParagraphs(section.body ?? []),
         bullets: (section.bullets ?? []).join("\n"),
       }))
     : [defaultPostSection];
@@ -527,6 +545,9 @@ interface PostDialogProps {
 
 const PostDialog = ({ open, onOpenChange, post, submitting, onSubmit }: PostDialogProps) => {
   const [showPreview, setShowPreview] = useState(false);
+  const [isUploadingHero, setIsUploadingHero] = useState(false);
+  const { toast } = useToast();
+  const heroUploadEnabled = isHeroImageUploadEnabled;
   const { control, register, handleSubmit, watch, setValue } = useForm<PostFormValues>({
     defaultValues: mapPostToFormValues(post),
     values: mapPostToFormValues(post),
@@ -543,6 +564,53 @@ const PostDialog = ({ open, onOpenChange, post, submitting, onSubmit }: PostDial
       setValue("sections", [defaultPostSection]);
     }
   }, [post, setValue]);
+
+  const handleHeroImageUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    const isMimeAllowed = HERO_IMAGE_ALLOWED_TYPES.includes(file.type);
+    const isExtensionAllowed = extension ? HERO_IMAGE_ALLOWED_EXTENSIONS.includes(extension) : false;
+    if (!isMimeAllowed && !isExtensionAllowed) {
+      toast({
+        title: "Unsupported file type",
+        description: "Please upload a JPG or PNG image.",
+        variant: "destructive",
+      });
+      event.target.value = "";
+      return;
+    }
+
+    const maxBytes = HERO_IMAGE_MAX_SIZE_MB * 1024 * 1024;
+    if (file.size > maxBytes) {
+      toast({
+        title: "Image is too large",
+        description: `Please choose a file under ${HERO_IMAGE_MAX_SIZE_MB} MB.`,
+        variant: "destructive",
+      });
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      setIsUploadingHero(true);
+      const derivedSlug = watch("slug") || slugify(watch("title"));
+      const publicUrl = await uploadPostHeroImage(file, { slug: derivedSlug });
+      setValue("heroImage", publicUrl, { shouldDirty: true });
+      toast({ title: "Image uploaded", description: "The hero image URL has been populated for you." });
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Unable to upload image",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingHero(false);
+      event.target.value = "";
+    }
+  };
 
   const handleGenerateSlug = () => {
     const slug = slugify(watch("title"));
@@ -564,9 +632,7 @@ const PostDialog = ({ open, onOpenChange, post, submitting, onSubmit }: PostDial
       publishedAt: toIsoIfValue(values.publishedAt),
       content: values.sections.map((section) => ({
         heading: section.heading || undefined,
-        body: section.body
-          ? section.body.split("\n").map((paragraph) => paragraph.trim()).filter(Boolean)
-          : [],
+        body: section.body ? normalizeTextareaParagraphs(section.body) : [],
         bullets: section.bullets
           ? section.bullets.split("\n").map((bullet) => bullet.trim()).filter(Boolean)
           : undefined,
@@ -719,9 +785,57 @@ const PostDialog = ({ open, onOpenChange, post, submitting, onSubmit }: PostDial
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="heroImage">Hero image URL</Label>
+            <div className="space-y-3">
+              <Label htmlFor="heroImage">Hero image</Label>
+              <p className="text-sm text-gray-600">
+                Paste a hosted image URL or upload directly. Leaving this empty falls back to the Linque illustration.
+                Uploads must be JPG or PNG under {HERO_IMAGE_MAX_SIZE_MB} MB.
+              </p>
               <Input id="heroImage" {...register("heroImage")} placeholder="https://..." />
+              <div className="space-y-2 rounded-lg border border-dashed border-muted/40 bg-muted/10 p-4">
+                <div className="flex items-center gap-3">
+                  <ImagePlus className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+                  <div className="text-sm">
+                    <p className="font-medium text-foreground">Upload from your device</p>
+                    <p className="text-muted-foreground">
+                      JPG or PNG up to {HERO_IMAGE_MAX_SIZE_MB} MB. Larger files are rejected automatically.
+                    </p>
+                  </div>
+                </div>
+                <Input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+                  disabled={!heroUploadEnabled || isUploadingHero}
+                  onChange={handleHeroImageUpload}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {heroUploadEnabled
+                    ? isUploadingHero
+                      ? "Uploading image…"
+                      : "Files save to Supabase Storage and this URL updates automatically."
+                    : "Configure a Supabase Storage bucket to enable uploads."}
+                </p>
+              </div>
+              {formValues.heroImage ? (
+                <div className="overflow-hidden rounded-xl border border-muted/60 bg-background/80">
+                  <img src={formValues.heroImage} alt="Hero preview" className="h-48 w-full object-cover" />
+                  <div className="flex items-center justify-between gap-2 border-t px-3 py-2">
+                    <p className="truncate text-xs text-muted-foreground">{formValues.heroImage}</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setValue("heroImage", "", { shouldDirty: true })}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs italic text-muted-foreground">
+                  No hero image selected. Blog posts will use the digital transformation illustration.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="readTimeMinutes">Read time (minutes)</Label>

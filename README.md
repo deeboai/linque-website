@@ -67,6 +67,7 @@ The app reads optional variables from `.env` files (create `.env.local` for loca
 | `VITE_CONTACT_ENDPOINT` | Optional legacy API endpoint for the contact form. When omitted the form opens the user's mail client via `mailto`. | `undefined` |
 | `VITE_SUPABASE_URL` | Supabase project URL used by the CMS backend. | `undefined` |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon/public API key. Required for both the public site and the admin UI. | `undefined` |
+| `VITE_SUPABASE_STORAGE_BUCKET` | Optional override for the Supabase Storage bucket that stores uploaded blog hero images. | `blog-images` |
 
 Store secrets outside of version control (e.g., `.env.local` added to `.gitignore`).
 
@@ -221,6 +222,18 @@ Enable Row Level Security and create policies that allow:
 2. Anonymous access to select only published records for the public site (optional if you fetch through server-side actions).
 
 For richer workflows you can add storage buckets for hero imagery, role-based permissions, and webhooks to trigger static rebuilds after publish events.
+
+### Hero image uploads
+
+The admin dashboard now supports uploading hero imagery directly to Supabase Storage so you no longer need to host assets elsewhere. To enable this workflow:
+
+1. Create a **public bucket** named `blog-images` in Supabase Storage (or pick any name and reference it via `VITE_SUPABASE_STORAGE_BUCKET`).
+2. Keep the default public read policy enabled or add a custom `storage.objects` select policy scoped to that bucket so the website can render the files.
+3. Ensure authenticated users have insert/update permissions on the same bucket so the admin UI can upload files.
+
+Uploaded assets are stored under `posts/{slug}/{timestamp}-{filename}` and the resulting public URL is written to the `hero_image` column automatically.
+
+> Note: uploads must be **JPG or PNG** and smaller than **2 MB**; the admin UI blocks anything outside those limits before sending to Supabase.
 
 ---
 
