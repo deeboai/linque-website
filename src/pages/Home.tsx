@@ -5,6 +5,7 @@ import { Users, Target, TrendingUp, Award, ClipboardList } from "lucide-react";
 import heroVideo from "@/assets/YTDown.com_YouTube_Office-Stock-Footage-People-Working-As-A_Media_TUvpL_Hx0is_001_1080p.mp4";
 import promoVideo from "@/assets/website_final.mp4";
 import heroFallbackImage from "@/assets/hero-team-DOfHooPV.jpg";
+import hhfCertificationImage from "@/assets/hhf-certification.png";
 import AnimatedSection from "@/components/AnimatedSection";
 import ScribbleHighlight from "@/components/ScribbleHighlight";
 import { useState, useEffect, useRef } from "react";
@@ -92,6 +93,29 @@ const Home = () => {
       description: "Certified in PMP and Scrum, we bring structure, clarity, and accountability to every engagement, delivering on time and within scope.",
       delay: 400,
       centerContent: true,
+      credlyBadgeId: "e05ac079-ad47-4984-9fd5-ec6269232b92",
+    },
+  ];
+
+  // The first four value cards stay compact, while certification highlights use a wider layout for badge artwork.
+  const certificationHighlights = [
+    {
+      icon: Award,
+      title: "Hire Houston First Certification",
+      subtitle: "City of Houston Local Business (LB)",
+      description:
+        "Designated by the City of Houston Office of Business Opportunity through the Hire Houston First program, reflecting Linque Resourcing's local business presence and commitment to Houston-based partnerships.",
+      delay: 400,
+      image: hhfCertificationImage,
+      imageAlt: "City of Houston Hire Houston First Local Business certification for Linque Resourcing",
+    },
+    {
+      icon: ClipboardList,
+      title: "Project Management Excellence",
+      subtitle: "PMP and Scrum certified leadership",
+      description:
+        "Certified in PMP and Scrum, we bring structure, clarity, and accountability to every engagement, delivering on time and within scope.",
+      delay: 500,
       credlyBadgeId: "e05ac079-ad47-4984-9fd5-ec6269232b92",
     },
   ];
@@ -281,24 +305,42 @@ const Home = () => {
               })}
             </div>
 
-            <AnimatedSection animation="fade-in-up" delay={valuePropositions[4].delay}>
-              <Card className="group border-none bg-gradient-to-br from-background to-muted/20 shadow-card transition-all duration-500 hover:shadow-elegant hover-lift">
-                <CardContent className="flex flex-col gap-6 px-6 pb-6 pt-8 md:flex-row md:items-center md:justify-between">
-                  <div className="flex w-full flex-col items-center gap-4 text-center md:max-w-xl md:items-start md:text-left md:flex-1">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-hero transition-transform duration-300 group-hover:scale-110">
-                      <ClipboardList className="w-8 h-8 text-white" />
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-xl font-semibold">{valuePropositions[4].title}</h3>
-                      <p className="text-muted-foreground leading-relaxed">{valuePropositions[4].description}</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-center md:justify-end">
-                    <CredlyBadge badgeId={valuePropositions[4].credlyBadgeId} />
-                  </div>
-                </CardContent>
-              </Card>
-            </AnimatedSection>
+            {certificationHighlights.map((item) => {
+              const Icon = item.icon;
+
+              return (
+                <AnimatedSection key={item.title} animation="fade-in-up" delay={item.delay}>
+                  <Card className="group border-none bg-gradient-to-br from-background to-muted/20 shadow-card transition-all duration-500 hover:shadow-elegant hover-lift">
+                    <CardContent className="flex flex-col gap-6 px-6 pb-6 pt-8 md:flex-row md:items-center md:justify-between">
+                      <div className="flex w-full flex-col items-center gap-4 text-center md:max-w-xl md:items-start md:text-left md:flex-1">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-hero transition-transform duration-300 group-hover:scale-110">
+                          <Icon className="h-8 w-8 text-white" />
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="text-xl font-semibold">{item.title}</h3>
+                          <p className="text-sm font-semibold uppercase tracking-wide text-primary/80">
+                            {item.subtitle}
+                          </p>
+                          <p className="text-muted-foreground leading-relaxed">{item.description}</p>
+                        </div>
+                      </div>
+                      <div className="flex justify-center md:justify-end">
+                        {item.credlyBadgeId ? (
+                          <CredlyBadge badgeId={item.credlyBadgeId} />
+                        ) : (
+                          <img
+                            src={item.image}
+                            alt={item.imageAlt}
+                            className="max-h-72 w-auto rounded-lg border border-border bg-white p-2 shadow-sm"
+                            loading="lazy"
+                          />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </AnimatedSection>
+              );
+            })}
           </div>
         </div>
       </section>
