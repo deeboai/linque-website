@@ -74,11 +74,15 @@ const Jobs = () => {
             <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1 text-sm font-semibold text-primary">
               Careers at Linque
             </span>
+            {/* Careers page introduction copy */}
             <h1 className="text-4xl md:text-5xl font-bold leading-tight">
-              Join a team that <ScribbleHighlight>builds people-first change</ScribbleHighlight> for organizations.
+              Current <ScribbleHighlight>Openings</ScribbleHighlight>
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed">
-              Explore sample opportunities across consulting, talent, and people operations. Roles flex across client work, fractional leadership, and internal initiatives.
+              Explore our current opportunities. If there is a role you&apos;re interested in, click apply to be considered.
+            </p>
+            <p className="text-lg text-muted-foreground leading-relaxed">
+              Don&apos;t see something that fits? We are always recruiting, so send us your resume to join our talent pool.
             </p>
           </AnimatedSection>
         </div>
