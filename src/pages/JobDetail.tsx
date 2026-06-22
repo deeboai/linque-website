@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MapPin, Briefcase, Clock, ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
 import { useJob } from "@/hooks/useContent";
+import { JobApplicationForm } from "@/components/JobApplicationForm";
 
 const JobDetail = () => {
   const { slug } = useParams();
@@ -28,6 +29,7 @@ const JobDetail = () => {
 
   const canonicalUrl = buildCanonicalUrl(`/jobs/${job.slug}`);
   const applyHref = job.applyUrl ?? `mailto:${job.applyEmail ?? "careers@linqueresourcing.com"}`;
+  const hasInternalApplications = job.applicationsEnabled;
 
   return (
     <div className="min-h-screen bg-background">
@@ -94,11 +96,17 @@ const JobDetail = () => {
             </h1>
             <p className="max-w-3xl text-lg text-muted-foreground leading-relaxed">{job.summary}</p>
             <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg">
-                <a href={applyHref}>
-                  Apply now <ExternalLink className="ml-2 h-4 w-4" aria-hidden="true" />
-                </a>
-              </Button>
+              {hasInternalApplications ? (
+                <Button asChild size="lg">
+                  <a href="#apply">Apply now</a>
+                </Button>
+              ) : (
+                <Button asChild size="lg">
+                  <a href={applyHref}>
+                    Apply now <ExternalLink className="ml-2 h-4 w-4" aria-hidden="true" />
+                  </a>
+                </Button>
+              )}
               <Button variant="outline" size="lg" asChild>
                 <Link to="/contact">Talk with us</Link>
               </Button>
@@ -137,6 +145,8 @@ const JobDetail = () => {
                 </ul>
               </div>
             </Card>
+
+            <JobApplicationForm job={job} />
 
             <Card className="border border-muted/40 bg-muted/40 p-8 text-center text-sm text-muted-foreground">
               <p>

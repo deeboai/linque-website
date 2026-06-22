@@ -1,6 +1,18 @@
 import { supabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { blogPosts, type BlogPost } from "@/data/posts";
 import { jobPostings, type JobPosting } from "@/data/jobs";
+import {
+  defaultJobApplicationSettings,
+  normalizeJobApplicationSettings,
+  type JobApplicationAnswer,
+  type JobApplicationEeoSubmissionInput,
+  type JobApplicationNotificationStatus,
+  type JobApplicationPlaceholders,
+  type JobApplicationReference,
+  type JobApplicationSettings,
+  type JobApplicationStatus,
+  type ScreeningQuestionKey,
+} from "@/lib/jobApplications";
 
 export type PublishStatus = "draft" | "published" | "scheduled";
 
@@ -42,10 +54,61 @@ export interface CMSJob {
   salaryRange?: string | null;
   applyEmail?: string | null;
   applyUrl?: string | null;
+  applicationsEnabled: boolean;
+  screeningQuestionKeys: ScreeningQuestionKey[];
+  applicationPlaceholders: JobApplicationPlaceholders;
   status: PublishStatus;
   postedAt: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+}
+
+export interface CMSJobApplication {
+  id?: string;
+  jobId: string;
+  jobSlug: string;
+  jobTitle: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  address: string;
+  desiredPay: string;
+  workAuthorization: string;
+  availableStartDate: string;
+  highestEducation: string;
+  whyInterested: string;
+  backgroundCheckConsent: boolean;
+  futureRoleInterest: boolean;
+  professionalReferences: JobApplicationReference[];
+  screeningAnswers: JobApplicationAnswer[];
+  resumeBucket: string;
+  resumePath: string;
+  resumeFileName: string;
+  resumeContentType: string;
+  reviewStatus: JobApplicationStatus;
+  adminNotes?: string | null;
+  notificationStatus: JobApplicationNotificationStatus;
+  notificationError?: string | null;
+  notificationAttemptedAt?: string | null;
+  internalNotificationSentAt?: string | null;
+  applicantConfirmationSentAt?: string | null;
+  internalNotificationEmailId?: string | null;
+  applicantConfirmationEmailId?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
+export interface CMSJobApplicationEeo {
+  applicationId: string;
+  jobId: string;
+  raceEthnicity: JobApplicationEeoSubmissionInput["raceEthnicity"];
+  gender: JobApplicationEeoSubmissionInput["gender"];
+  veteranStatus: JobApplicationEeoSubmissionInput["veteranStatus"];
+  disabilityStatus: JobApplicationEeoSubmissionInput["disabilityStatus"];
+}
+
+export interface CMSJobApplicationEeoSubmissionInput extends JobApplicationEeoSubmissionInput {
+  applicationId: string;
 }
 
 export interface FetchOptions {
@@ -82,6 +145,9 @@ const mapJobPosting = (job: JobPosting): CMSJob => ({
   salaryRange: job.salaryRange ?? null,
   applyEmail: job.applyEmail ?? null,
   applyUrl: job.applyUrl ?? null,
+  applicationsEnabled: false,
+  screeningQuestionKeys: [],
+  applicationPlaceholders: defaultJobApplicationSettings.placeholders,
   status: "published",
   postedAt: job.postedAt,
 });
@@ -121,8 +187,44 @@ type SupabaseJobRow = {
   salary_range?: string | null;
   apply_email?: string | null;
   apply_url?: string | null;
+  application_settings?: JobApplicationSettings | null;
   status?: PublishStatus | null;
   posted_at?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+type SupabaseJobApplicationRow = {
+  id?: string;
+  job_id: string;
+  job_slug: string;
+  job_title: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  address: string;
+  desired_pay: string;
+  work_authorization: string;
+  available_start_date: string;
+  highest_education: string;
+  why_interested: string;
+  background_check_consent: boolean;
+  future_role_interest: boolean;
+  professional_references?: JobApplicationReference[] | null;
+  screening_answers?: JobApplicationAnswer[] | null;
+  resume_bucket: string;
+  resume_path: string;
+  resume_file_name: string;
+  resume_content_type: string;
+  review_status?: JobApplicationStatus | null;
+  admin_notes?: string | null;
+  notification_status?: JobApplicationNotificationStatus | null;
+  notification_error?: string | null;
+  notification_attempted_at?: string | null;
+  internal_notification_sent_at?: string | null;
+  applicant_confirmation_sent_at?: string | null;
+  internal_notification_email_id?: string | null;
+  applicant_confirmation_email_id?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 };
@@ -145,22 +247,66 @@ const adaptPostFromSupabase = (record: SupabasePostRow): CMSPost => ({
 });
 
 const adaptJobFromSupabase = (record: SupabaseJobRow): CMSJob => ({
+  // Application settings are stored as JSON so the fixed question bank can evolve without a new table.
+  ...(() => {
+    const applicationSettings = normalizeJobApplicationSettings(record.application_settings);
+    return {
+      id: record.id ?? undefined,
+      title: record.title,
+      slug: record.slug,
+      location: record.location ?? "",
+      employmentType: record.employment_type ?? "",
+      department: record.department ?? "",
+      remoteType: record.remote_type ?? "Onsite",
+      summary: record.summary ?? "",
+      description: record.description ?? "",
+      responsibilities: record.responsibilities ?? [],
+      qualifications: record.qualifications ?? [],
+      salaryRange: record.salary_range ?? null,
+      applyEmail: record.apply_email ?? null,
+      applyUrl: record.apply_url ?? null,
+      applicationsEnabled: applicationSettings.applicationsEnabled,
+      screeningQuestionKeys: applicationSettings.screeningQuestionKeys,
+      applicationPlaceholders: applicationSettings.placeholders,
+      status: (record.status as PublishStatus) ?? "draft",
+      postedAt: record.posted_at ?? null,
+      createdAt: record.created_at ?? null,
+      updatedAt: record.updated_at ?? null,
+    };
+  })(),
+});
+
+const adaptJobApplicationFromSupabase = (record: SupabaseJobApplicationRow): CMSJobApplication => ({
   id: record.id ?? undefined,
-  title: record.title,
-  slug: record.slug,
-  location: record.location ?? "",
-  employmentType: record.employment_type ?? "",
-  department: record.department ?? "",
-  remoteType: record.remote_type ?? "Onsite",
-  summary: record.summary ?? "",
-  description: record.description ?? "",
-  responsibilities: record.responsibilities ?? [],
-  qualifications: record.qualifications ?? [],
-  salaryRange: record.salary_range ?? null,
-  applyEmail: record.apply_email ?? null,
-  applyUrl: record.apply_url ?? null,
-  status: (record.status as PublishStatus) ?? "draft",
-  postedAt: record.posted_at ?? null,
+  jobId: record.job_id,
+  jobSlug: record.job_slug,
+  jobTitle: record.job_title,
+  fullName: record.full_name,
+  email: record.email,
+  phone: record.phone,
+  address: record.address,
+  desiredPay: record.desired_pay,
+  workAuthorization: record.work_authorization,
+  availableStartDate: record.available_start_date,
+  highestEducation: record.highest_education,
+  whyInterested: record.why_interested,
+  backgroundCheckConsent: record.background_check_consent,
+  futureRoleInterest: record.future_role_interest,
+  professionalReferences: record.professional_references ?? [],
+  screeningAnswers: record.screening_answers ?? [],
+  resumeBucket: record.resume_bucket,
+  resumePath: record.resume_path,
+  resumeFileName: record.resume_file_name,
+  resumeContentType: record.resume_content_type,
+  reviewStatus: (record.review_status as JobApplicationStatus) ?? "new",
+  adminNotes: record.admin_notes ?? null,
+  notificationStatus: (record.notification_status as JobApplicationNotificationStatus) ?? "pending",
+  notificationError: record.notification_error ?? null,
+  notificationAttemptedAt: record.notification_attempted_at ?? null,
+  internalNotificationSentAt: record.internal_notification_sent_at ?? null,
+  applicantConfirmationSentAt: record.applicant_confirmation_sent_at ?? null,
+  internalNotificationEmailId: record.internal_notification_email_id ?? null,
+  applicantConfirmationEmailId: record.applicant_confirmation_email_id ?? null,
   createdAt: record.created_at ?? null,
   updatedAt: record.updated_at ?? null,
 });
@@ -243,6 +389,20 @@ export const fetchJobBySlug = async (slug: string, options: FetchOptions = {}): 
 
 export type CMSPostInput = Omit<CMSPost, "createdAt" | "updatedAt">;
 export type CMSJobInput = Omit<CMSJob, "createdAt" | "updatedAt">;
+export type CMSJobApplicationInput = Omit<
+  CMSJobApplication,
+  | "createdAt"
+  | "updatedAt"
+  | "reviewStatus"
+  | "adminNotes"
+  | "notificationStatus"
+  | "notificationError"
+  | "notificationAttemptedAt"
+  | "internalNotificationSentAt"
+  | "applicantConfirmationSentAt"
+  | "internalNotificationEmailId"
+  | "applicantConfirmationEmailId"
+>;
 
 const ensureSupabase = () => {
   if (!supabase) {
@@ -280,6 +440,11 @@ export const deletePost = async (id: string) => {
 
 export const upsertJob = async (input: CMSJobInput) => {
   ensureSupabase();
+  const applicationSettings = {
+    applicationsEnabled: input.applicationsEnabled,
+    screeningQuestionKeys: input.screeningQuestionKeys,
+    placeholders: input.applicationPlaceholders,
+  };
   const payload = {
     id: input.id ?? undefined,
     title: input.title,
@@ -295,6 +460,7 @@ export const upsertJob = async (input: CMSJobInput) => {
     salary_range: input.salaryRange,
     apply_email: input.applyEmail,
     apply_url: input.applyUrl,
+    application_settings: applicationSettings,
     status: input.status,
     posted_at: input.postedAt,
   };
@@ -305,6 +471,100 @@ export const upsertJob = async (input: CMSJobInput) => {
 export const deleteJob = async (id: string) => {
   ensureSupabase();
   const { error } = await supabase!.from("jobs").delete().eq("id", id);
+  if (error) throw error;
+};
+
+export const fetchJobApplications = async (): Promise<CMSJobApplication[]> => {
+  ensureSupabase();
+  const { data, error } = await supabase!
+    .from("job_applications")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map((record) => adaptJobApplicationFromSupabase(record as SupabaseJobApplicationRow));
+};
+
+export const createJobApplication = async (input: CMSJobApplicationInput) => {
+  ensureSupabase();
+  if (!input.id) {
+    throw new Error("Job application submission requires an application id.");
+  }
+  const applicationPayload = {
+    applicationId: input.id,
+    jobId: input.jobId,
+    jobSlug: input.jobSlug,
+    jobTitle: input.jobTitle,
+    fullName: input.fullName,
+    email: input.email,
+    phone: input.phone,
+    address: input.address,
+    desiredPay: input.desiredPay,
+    workAuthorization: input.workAuthorization,
+    availableStartDate: input.availableStartDate,
+    highestEducation: input.highestEducation,
+    whyInterested: input.whyInterested,
+    backgroundCheckConsent: input.backgroundCheckConsent,
+    futureRoleInterest: input.futureRoleInterest,
+    professionalReferences: input.professionalReferences,
+    screeningAnswers: input.screeningAnswers,
+    resumeBucket: input.resumeBucket,
+    resumePath: input.resumePath,
+    resumeFileName: input.resumeFileName,
+    resumeContentType: input.resumeContentType,
+  };
+  // The application submission endpoint returns the new application id without exposing extra row access to public users.
+  const { data, error } = await supabase!.rpc("submit_job_application", {
+    application_payload: applicationPayload,
+  });
+  if (error) throw error;
+
+  if (typeof data !== "string" || !data) {
+    throw new Error("Job application submission did not return an application id.");
+  }
+
+  return data;
+};
+
+export const submitJobApplicationEeo = async (input: CMSJobApplicationEeoSubmissionInput) => {
+  ensureSupabase();
+  const eeoPayload = {
+    applicationId: input.applicationId,
+    jobId: input.jobId,
+    raceEthnicity: input.raceEthnicity,
+    gender: input.gender,
+    veteranStatus: input.veteranStatus,
+    disabilityStatus: input.disabilityStatus,
+  };
+  // EEO responses go through a separate RPC so compliance-sensitive data is never written with the main application payload.
+  const { error } = await supabase!.rpc("submit_job_application_eeo", {
+    eeo_payload: eeoPayload,
+  });
+  if (error) throw error;
+};
+
+export const deleteJobApplicationEeoDraft = async (input: Pick<CMSJobApplicationEeoSubmissionInput, "applicationId" | "jobId">) => {
+  ensureSupabase();
+  const { error } = await supabase!.rpc("delete_job_application_eeo_draft", {
+    application_id: input.applicationId,
+    job_id: input.jobId,
+  });
+  if (error) throw error;
+};
+
+export const updateJobApplication = async (
+  id: string,
+  updates: Pick<CMSJobApplication, "reviewStatus" | "adminNotes">,
+) => {
+  ensureSupabase();
+  const payload = {
+    review_status: updates.reviewStatus,
+    admin_notes: updates.adminNotes ?? null,
+  };
+  const { error } = await supabase!.from("job_applications").update(payload).eq("id", id);
   if (error) throw error;
 };
 

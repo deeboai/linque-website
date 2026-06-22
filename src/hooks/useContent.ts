@@ -1,10 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   contentSource,
+  fetchJobApplications,
   fetchJobBySlug,
   fetchJobs,
   fetchPostBySlug,
   fetchPosts,
+  type CMSJobApplication,
   type CMSJob,
   type CMSPost,
   type FetchOptions,
@@ -12,9 +14,11 @@ import {
 
 const basePostsKey = "posts";
 const baseJobsKey = "jobs";
+const baseApplicationsKey = "job-applications";
 
 export const postsQueryKey = (options?: FetchOptions) => [basePostsKey, options?.includeDrafts ?? false];
 export const jobsQueryKey = (options?: FetchOptions) => [baseJobsKey, options?.includeDrafts ?? false];
+export const jobApplicationsQueryKey = () => [baseApplicationsKey];
 
 export const usePosts = (options?: FetchOptions) => {
   const includeDrafts = options?.includeDrafts ?? false;
@@ -79,3 +83,11 @@ export const useJob = (slug: string | undefined, options?: FetchOptions) => {
     },
   });
 };
+
+export const useJobApplications = () =>
+  useQuery({
+    queryKey: jobApplicationsQueryKey(),
+    queryFn: () => fetchJobApplications(),
+    staleTime: 30 * 1000,
+    initialData: [] as CMSJobApplication[],
+  });

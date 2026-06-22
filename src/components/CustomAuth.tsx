@@ -11,6 +11,9 @@ interface CustomAuthProps {
   onAuthSuccess?: () => void;
 }
 
+const getErrorMessage = (error: unknown, fallbackMessage: string) =>
+  error instanceof Error ? error.message : fallbackMessage;
+
 export const CustomAuth: React.FC<CustomAuthProps> = ({ onAuthSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -39,8 +42,8 @@ export const CustomAuth: React.FC<CustomAuthProps> = ({ onAuthSuccess }) => {
       
       toast({ title: 'Welcome back!' });
       onAuthSuccess?.();
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+    } catch (error) {
+      setError(getErrorMessage(error, 'Authentication failed'));
     } finally {
       setIsLoading(false);
     }
@@ -65,8 +68,8 @@ export const CustomAuth: React.FC<CustomAuthProps> = ({ onAuthSuccess }) => {
         title: 'Reset email sent!',
         description: 'Check your email for password reset instructions.'
       });
-    } catch (err: any) {
-      setError(err.message || 'Failed to send reset email');
+    } catch (error) {
+      setError(getErrorMessage(error, 'Failed to send reset email'));
     }
   };
 

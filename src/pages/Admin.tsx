@@ -15,13 +15,21 @@ import {
   type CMSPostSection,
 } from "@/lib/content";
 import { usePosts, useJobs, postsQueryKey, jobsQueryKey } from "@/hooks/useContent";
+import {
+  defaultJobApplicationSettings,
+  screeningQuestionDefinitions,
+  type JobApplicationPlaceholders,
+  type ScreeningQuestionKey,
+} from "@/lib/jobApplications";
 import AnimatedSection from "@/components/AnimatedSection";
+import { ApplicationsManager } from "@/components/ApplicationsManager";
 import { CustomAuth } from "@/components/CustomAuth";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
@@ -66,6 +74,9 @@ type JobFormValues = {
   salaryRange: string;
   applyEmail: string;
   applyUrl: string;
+  applicationsEnabled: boolean;
+  screeningQuestionKeys: ScreeningQuestionKey[];
+  applicationPlaceholders: JobApplicationPlaceholders;
   status: PublishStatus;
   postedAt: string;
 };
@@ -157,6 +168,9 @@ const mapJobToFormValues = (job?: CMSJob): JobFormValues => ({
   salaryRange: job?.salaryRange ?? "",
   applyEmail: job?.applyEmail ?? "",
   applyUrl: job?.applyUrl ?? "",
+  applicationsEnabled: job?.applicationsEnabled ?? defaultJobApplicationSettings.applicationsEnabled,
+  screeningQuestionKeys: job?.screeningQuestionKeys ?? [],
+  applicationPlaceholders: job?.applicationPlaceholders ?? defaultJobApplicationSettings.placeholders,
   status: job?.status ?? "draft",
   postedAt: toDateInputValue(job?.postedAt),
 });
@@ -295,7 +309,7 @@ const Admin = () => {
         <div>
           <h1 className="text-3xl font-bold">Content Manager</h1>
           <p className="text-muted-foreground mt-2">
-            Add, update, and publish blog posts or job listings. Changes sync instantly with the public site.
+            Add, update, and publish blog posts or job listings. Internal applications and reviewer notes also live here.
           </p>
         </div>
         <Button variant="outline" onClick={handleSignOut}>
@@ -306,12 +320,16 @@ const Admin = () => {
         <TabsList className="mb-6">
           <TabsTrigger value="posts">Posts</TabsTrigger>
           <TabsTrigger value="jobs">Jobs</TabsTrigger>
+          <TabsTrigger value="applications">Applications</TabsTrigger>
         </TabsList>
         <TabsContent value="posts">
           <PostsManager />
         </TabsContent>
         <TabsContent value="jobs">
           <JobsManager />
+        </TabsContent>
+        <TabsContent value="applications">
+          <ApplicationsManager />
         </TabsContent>
       </Tabs>
     </div>
@@ -507,6 +525,7 @@ const JobsManager = () => {
                 <div className="flex items-center gap-3">
                   <h3 className="text-lg font-semibold">{job.title}</h3>
                   <Badge variant={job.status === "published" ? "default" : "secondary"}>{job.status}</Badge>
+                  {job.applicationsEnabled && <Badge variant="outline">Internal applications</Badge>}
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
                   {job.location} · {job.employmentType} · /jobs/{job.slug}
@@ -962,6 +981,9 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
       salaryRange: values.salaryRange || null,
       applyEmail: values.applyEmail || null,
       applyUrl: values.applyUrl || null,
+      applicationsEnabled: values.applicationsEnabled,
+      screeningQuestionKeys: values.screeningQuestionKeys,
+      applicationPlaceholders: values.applicationPlaceholders,
       status: values.status,
       postedAt: toIsoIfValue(values.postedAt),
     };
@@ -1001,6 +1023,7 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
                   <span>{formValues.employmentType}</span>
                   <span>{formValues.remoteType}</span>
                   <span>Status: {formValues.status || 'draft'}</span>
+                  <span>{formValues.applicationsEnabled ? "Internal apply enabled" : "External apply only"}</span>
                 </div>
                 {formValues.salaryRange && (
                   <p className="text-lg font-semibold text-gray-900 mb-4">
@@ -1041,6 +1064,11 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
                 
                 <div className="pt-6 border-t">
                   <h3 className="text-lg font-semibold mb-2">How to Apply</h3>
+                  {formValues.applicationsEnabled && (
+                    <p className="mb-3 text-gray-700">
+                      Applications will be collected directly on the job page and routed into the admin dashboard for review.
+                    </p>
+                  )}
                   {formValues.applyEmail && (
                     <p className="mb-2">
                       <strong>Email:</strong> <a href={`mailto:${formValues.applyEmail}`} className="text-blue-600 hover:underline">{formValues.applyEmail}</a>
@@ -1052,6 +1080,22 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
                     </p>
                   )}
                 </div>
+
+                {formValues.applicationsEnabled && (
+                  <div className="pt-6 border-t">
+                    <h3 className="text-lg font-semibold mb-2">Screening question bank</h3>
+                    {formValues.screeningQuestionKeys.length > 0 ? (
+                      <ul className="list-disc list-inside space-y-1 text-gray-700">
+                        {formValues.screeningQuestionKeys.map((questionKey) => {
+                          const definition = screeningQuestionDefinitions.find((item) => item.key === questionKey);
+                          return <li key={questionKey}>{definition?.title ?? questionKey}</li>;
+                        })}
+                      </ul>
+                    ) : (
+                      <p className="text-gray-600">No role-specific screening questions selected for this job.</p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             
@@ -1142,6 +1186,109 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
               <Label htmlFor="job-apply-url">Apply URL</Label>
               <Input id="job-apply-url" {...register("applyUrl")} placeholder="https://cal.com/..." />
             </div>
+          </div>
+
+          <div className="space-y-4 rounded-xl border border-muted/60 bg-muted/10 p-4">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="job-applications-enabled"
+                checked={watch("applicationsEnabled")}
+                onCheckedChange={(checked) => setValue("applicationsEnabled", Boolean(checked))}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="job-applications-enabled">Enable internal application form</Label>
+                <p className="text-sm text-gray-600">
+                  When enabled, candidates apply directly on the public job page and submissions appear in the admin applications tab.
+                </p>
+              </div>
+            </div>
+
+            {watch("applicationsEnabled") && (
+              <div className="space-y-5">
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Approved screening questions
+                  </h4>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {screeningQuestionDefinitions.map((question) => {
+                      const selectedKeys = watch("screeningQuestionKeys");
+                      const isChecked = selectedKeys.includes(question.key);
+                      return (
+                        <div key={question.key} className="rounded-xl border border-muted/50 bg-white/70 p-4 space-y-2">
+                          <div className="flex items-start gap-3">
+                            <Checkbox
+                              id={`screening-question-${question.key}`}
+                              checked={isChecked}
+                              onCheckedChange={(checked) => {
+                                const nextKeys = checked
+                                  ? [...selectedKeys, question.key]
+                                  : selectedKeys.filter((key) => key !== question.key);
+                                setValue("screeningQuestionKeys", nextKeys);
+                              }}
+                            />
+                            <div className="space-y-1">
+                              <Label htmlFor={`screening-question-${question.key}`}>{question.title}</Label>
+                              <p className="text-xs text-muted-foreground">{question.description}</p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Placeholder values
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    Only fill the values that apply to this role. The public application form uses these values when rendering role-specific screening questions.
+                  </p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="placeholder-experience-area">Experience area</Label>
+                      <Input
+                        id="placeholder-experience-area"
+                        {...register("applicationPlaceholders.experienceArea")}
+                        placeholder="Customer service"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="placeholder-commute-location">Commute location</Label>
+                      <Input
+                        id="placeholder-commute-location"
+                        {...register("applicationPlaceholders.commuteLocation")}
+                        placeholder="Chicago office"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="placeholder-required-degree">Required degree or certificate</Label>
+                      <Input
+                        id="placeholder-required-degree"
+                        {...register("applicationPlaceholders.requiredDegreeOrCertificate")}
+                        placeholder="SHRM-CP certification"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="placeholder-required-skill">Required skill</Label>
+                      <Input
+                        id="placeholder-required-skill"
+                        {...register("applicationPlaceholders.requiredSkill")}
+                        placeholder="Workday reporting"
+                      />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="placeholder-relocation-location">Relocation location</Label>
+                      <Input
+                        id="placeholder-relocation-location"
+                        {...register("applicationPlaceholders.relocationLocation")}
+                        placeholder="Atlanta, GA"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">
