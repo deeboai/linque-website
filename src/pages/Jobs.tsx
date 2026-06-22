@@ -167,11 +167,17 @@ const Jobs = () => {
                           Learn more
                         </Link>
                       </Button>
-                      <Button asChild>
-                        <a href={job.applyUrl ?? `mailto:${job.applyEmail ?? "careers@linqueresourcing.com"}`}>
-                          Apply
-                        </a>
-                      </Button>
+                      {job.applicationsEnabled ? (
+                        <Button asChild>
+                          <Link to={`/jobs/${job.slug}#apply`}>Apply</Link>
+                        </Button>
+                      ) : (
+                        <Button asChild>
+                          <a href={job.applyUrl ?? `mailto:${job.applyEmail ?? "careers@linqueresourcing.com"}`}>
+                            Apply
+                          </a>
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

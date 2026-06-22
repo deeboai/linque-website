@@ -68,6 +68,7 @@ The app reads optional variables from `.env` files (create `.env.local` for loca
 | `VITE_SUPABASE_URL` | Supabase project URL used by the CMS backend. | `undefined` |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon/public API key. Required for both the public site and the admin UI. | `undefined` |
 | `VITE_SUPABASE_STORAGE_BUCKET` | Optional override for the Supabase Storage bucket that stores uploaded blog hero images. | `blog-images` |
+| `VITE_SUPABASE_APPLICATION_STORAGE_BUCKET` | Optional override for the private Supabase Storage bucket that stores applicant resumes. | `job-applications` |
 
 Store secrets outside of version control (e.g., `.env.local` added to `.gitignore`).
 
@@ -164,12 +165,24 @@ Use Tailwind utility classes for layout and spacing. Reusable gradients and shad
 ## Data & Content Management
 
 - **Headless CMS** – The site can read/write content through Supabase. When `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are present, blog posts and job listings load from the remote database; otherwise the bundled static data in `src/data/posts.ts` and `src/data/jobs.ts` is used as a fallback.
-- **Admin console** – Visit `/admin` to manage posts and jobs. The dashboard uses Supabase Auth; only authenticated users can create, edit, schedule, and delete content. Without Supabase credentials the admin route displays setup instructions.
+- **Admin console** – Visit `/admin` to manage posts, jobs, and submitted applications. The dashboard uses Supabase Auth; only authenticated users can create, edit, schedule, and review content and applications. Without Supabase credentials the admin route displays setup instructions.
 - **Static SEO assets** – `public/robots.txt` and `public/sitemap.xml` are ready for deployment. Adjust canonical URLs when hosting on a custom domain.
 
 ### Supabase schema (minimum viable setup)
 
-Create two tables in Supabase (`posts` and `jobs`) with the following columns (all `text` unless specified):
+Create three core tables in Supabase (`posts`, `jobs`, and `job_applications`) with the columns defined in [supabase/schema.sql](/Users/amadoutoure/Documents/git_projects/linque-website/supabase/schema.sql:1). The current application workflow extends the original CMS schema with:
+
+- `jobs.application_settings` – JSON configuration for the internal application flow, enabled question keys, and placeholder values.
+- `job_applications` – Applicant profile data, screening answers, resume metadata, and reviewer notes/status.
+- A private `job-applications` Storage bucket for resume uploads.
+
+The `posts` and `jobs` content columns remain the same as before. The new application workflow adds the following resume/application-specific capabilities:
+
+- Direct resume upload from the public job page
+- Internal application routing for roles that enable `application_settings.applicationsEnabled`
+- Admin-side review status updates (`new`, `in_review`, `shortlisted`, `rejected`, `hired`)
+- Resend-backed internal and applicant confirmation emails triggered after each successful submission
+- Screening answers stored as JSON so the fixed approved question bank can evolve without a schema rewrite
 
 **`posts`**
 
@@ -201,27 +214,49 @@ Create two tables in Supabase (`posts` and `jobs`) with the following columns (a
 | `department` | text | |
 | `remote_type` | text | Remote/Hybrid/Onsite |
 | `summary` | text | |
-
-### Contact form delivery
-
-By default the contact form opens the visitor's mail client using a prefilled `mailto:` link so their message is sent straight to `info@linqueresourcing.com`. The payload includes the subject, message, name, company, and work email. If you prefer server-side delivery, provide `VITE_CONTACT_ENDPOINT` and restore the API handler in `src/pages/Contact.tsx`.
-
 | `description` | text | |
 | `responsibilities` | text[] or jsonb | Array of bullet points |
 | `qualifications` | text[] or jsonb | Array of bullet points |
 | `salary_range` | text | Optional |
 | `apply_email` | text | Optional |
 | `apply_url` | text | Optional |
+| `application_settings` | jsonb | Internal application toggle, approved question keys, and placeholder values |
 | `status` | text | `draft`, `scheduled`, or `published` |
 | `posted_at` | timestamptz | Optional |
 | `created_at` / `updated_at` | timestamptz | Default `now()` |
 
+**`job_applications`**
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | uuid (default uuid_generate_v4) | Primary key |
+| `job_id` | uuid | Foreign key to `jobs.id` |
+| `job_slug` / `job_title` | text | Snapshot of the job at submission time |
+| `full_name`, `email`, `phone`, `address` | text | Required applicant details |
+| `desired_pay`, `work_authorization`, `available_start_date`, `highest_education` | text | Required applicant workflow fields |
+| `why_interested` | text | Required free-text response |
+| `background_check_consent`, `future_role_interest` | boolean | Standard workflow flags |
+| `professional_references` | jsonb | Up to three reference objects |
+| `screening_answers` | jsonb | Answers from the approved screening question bank |
+| `resume_bucket`, `resume_path`, `resume_file_name`, `resume_content_type` | text | Resume storage metadata |
+| `review_status` | text | `new`, `in_review`, `shortlisted`, `rejected`, or `hired` |
+| `admin_notes` | text | Reviewer notes |
+| `notification_status` | text | `pending`, `sent`, `partial`, or `failed` |
+| `notification_error` | text | Last delivery error when email sending fails |
+| `notification_attempted_at` | timestamptz | Last time the notification workflow ran |
+| `internal_notification_sent_at` / `applicant_confirmation_sent_at` | timestamptz | Per-email delivery timestamps |
+| `internal_notification_email_id` / `applicant_confirmation_email_id` | text | Resend message ids for support/debugging |
+| `created_at` / `updated_at` | timestamptz | Default `now()` |
+
 Enable Row Level Security and create policies that allow:
 
-1. Authenticated users (e.g., members of the “admin” role) to read and write the tables.
-2. Anonymous access to select only published records for the public site (optional if you fetch through server-side actions).
+1. Authenticated users (e.g., members of the “admin” role) to read and write `posts`, `jobs`, and application review fields.
+2. Anonymous access to select only published `posts` and `jobs`.
+3. Anonymous or authenticated public visitors to insert into `job_applications` only when the target job is published and internal applications are enabled.
 
-For richer workflows you can add storage buckets for hero imagery, role-based permissions, and webhooks to trigger static rebuilds after publish events.
+### Contact form delivery
+
+By default the contact form opens the visitor's mail client using a prefilled `mailto:` link so their message is sent straight to `info@linqueresourcing.com`. The payload includes the subject, message, name, company, and work email. If you prefer server-side delivery, provide `VITE_CONTACT_ENDPOINT` and restore the API handler in `src/pages/Contact.tsx`.
 
 ### Hero image uploads
 
@@ -234,6 +269,41 @@ The admin dashboard now supports uploading hero imagery directly to Supabase Sto
 Uploaded assets are stored under `posts/{slug}/{timestamp}-{filename}` and the resulting public URL is written to the `hero_image` column automatically.
 
 > Note: uploads must be **JPG or PNG** and smaller than **2 MB**; the admin UI blocks anything outside those limits before sending to Supabase.
+
+### Resume uploads
+
+Applicant resumes are stored in a **private bucket** named `job-applications` by default. To enable the workflow:
+
+1. Create the private bucket or run the SQL in [supabase/schema.sql](/Users/amadoutoure/Documents/git_projects/linque-website/supabase/schema.sql:1) so it is provisioned automatically.
+2. Keep the insert policy limited to files uploaded under the `applications/` prefix.
+3. Keep download access limited to authenticated reviewers so resumes are never public.
+
+The public application form accepts **PDF**, **DOC**, and **DOCX** files up to **5 MB**.
+
+### Application email delivery
+
+Application notifications are delivered by the Supabase Edge Function in [supabase/functions/job-application-notifications/index.ts](/Users/amadoutoure/Documents/git_projects/linque-website/supabase/functions/job-application-notifications/index.ts:1). The flow is:
+
+1. A candidate submits the internal application form.
+2. The application row is inserted into `job_applications`.
+3. A Postgres trigger uses `pg_net` to call the Edge Function.
+4. The function sends:
+   - an internal notification to `jobs.apply_email` or `APPLICATION_DEFAULT_NOTIFICATION_EMAIL`
+   - a confirmation email to the applicant
+5. The function writes the delivery result back onto the application row.
+
+To enable this in a real environment, set these Edge Function secrets in Supabase:
+
+- `RESEND_API_KEY` – API key from Resend
+- `RESEND_FROM_EMAIL` – verified sender such as `Linque Resourcing <careers@mail.linqueresourcing.com>`
+- `JOB_APPLICATION_WEBHOOK_SECRET` – shared secret used by the database trigger and the Edge Function
+- `APPLICATION_DEFAULT_NOTIFICATION_EMAIL` – fallback internal inbox when a job record does not define `apply_email`
+- `APPLICATION_ADMIN_URL` – optional override for the admin dashboard URL; defaults to `https://linqueresourcing.com/admin`
+
+The database trigger also expects these keys in the private `application_integration_settings` table:
+
+- `job_application_notifications_url` – full Edge Function URL, e.g. `https://<project-ref>.supabase.co/functions/v1/job-application-notifications`
+- `job_application_webhook_secret` – same value as `JOB_APPLICATION_WEBHOOK_SECRET`
 
 ---
 

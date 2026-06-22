@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabaseClient";
 
 const storageBucket = import.meta.env.VITE_SUPABASE_STORAGE_BUCKET ?? "blog-images";
+const applicationResumeBucket = import.meta.env.VITE_SUPABASE_APPLICATION_STORAGE_BUCKET ?? "job-applications";
 
 const sanitizeSegment = (value: string) =>
   value
@@ -15,6 +16,7 @@ const getFileExtension = (file: File) => {
 };
 
 export const isHeroImageUploadEnabled = Boolean(supabase && storageBucket);
+export const isApplicationResumeUploadEnabled = Boolean(supabase && applicationResumeBucket);
 
 export const uploadPostHeroImage = async (file: File, options?: { slug?: string }) => {
   if (!supabase) {
@@ -54,4 +56,61 @@ export const uploadPostHeroImage = async (file: File, options?: { slug?: string 
   }
 
   return data.publicUrl;
+};
+
+export const uploadApplicationResume = async (
+  file: File,
+  options: { jobSlug: string; applicantName: string },
+) => {
+  if (!supabase) {
+    throw new Error("Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+  }
+
+  if (!applicationResumeBucket) {
+    throw new Error(
+      "Application resume storage is not configured. Provide VITE_SUPABASE_APPLICATION_STORAGE_BUCKET or create a 'job-applications' bucket.",
+    );
+  }
+
+  const fileExtension = getFileExtension(file);
+  const timestamp = Date.now();
+  const safeApplicantName = sanitizeSegment(options.applicantName || "candidate");
+  const safeJobSlug = sanitizeSegment(options.jobSlug || "job");
+
+  // Resumes are stored under a stable prefix so storage policies can target this workflow precisely.
+  const objectPath = `applications/${safeJobSlug}/${timestamp}-${safeApplicantName}.${fileExtension}`;
+
+  const { error: uploadError } = await supabase.storage.from(applicationResumeBucket).upload(objectPath, file, {
+    cacheControl: "3600",
+    upsert: false,
+  });
+
+  if (uploadError) {
+    if (uploadError.message.toLowerCase().includes("bucket not found")) {
+      throw new Error(
+        `Supabase storage bucket "${applicationResumeBucket}" does not exist. Create it in Storage > Buckets or set VITE_SUPABASE_APPLICATION_STORAGE_BUCKET to an existing bucket.`,
+      );
+    }
+    throw uploadError;
+  }
+
+  return {
+    bucket: applicationResumeBucket,
+    path: objectPath,
+    fileName: file.name,
+    contentType: file.type || "application/octet-stream",
+  };
+};
+
+export const downloadApplicationResume = async (bucket: string, path: string) => {
+  if (!supabase) {
+    throw new Error("Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+  }
+
+  const { data, error } = await supabase.storage.from(bucket).download(path);
+  if (error) {
+    throw error;
+  }
+
+  return data;
 };
