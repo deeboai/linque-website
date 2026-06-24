@@ -461,7 +461,7 @@ const JobsManager = () => {
     },
     onError: (error) => {
       console.error(error);
-      toast({ title: "Unable to save job", variant: "destructive" });
+      toast({ title: error instanceof Error ? error.message : "Unable to save job", variant: "destructive" });
     },
   });
 
@@ -544,6 +544,7 @@ const JobsManager = () => {
         </div>
       )}
       <JobDialog
+        key={editingJob?.id ?? "new"}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         job={editingJob ?? undefined}
@@ -954,14 +955,30 @@ interface JobDialogProps {
 
 const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogProps) => {
   const [showPreview, setShowPreview] = useState(false);
-  const { register, handleSubmit, watch, setValue } = useForm<JobFormValues>({
+  const { register, handleSubmit, watch, setValue, reset } = useForm<JobFormValues>({
     defaultValues: mapJobToFormValues(job),
     values: mapJobToFormValues(job),
   });
 
   const formValues = watch();
 
+  useEffect(() => {
+    if (open) {
+      reset(mapJobToFormValues(job));
+      setShowPreview(false);
+    }
+  }, [open, job, reset]);
+
   const submit = (values: JobFormValues) => {
+    const isPublished = values.status === "published";
+    const isEditing = !!values.id;
+
+    if (isEditing && isPublished) {
+      if (!window.confirm("You're saving changes to a live, published job listing. This will update it immediately on the public site. Continue?")) return;
+    } else if (!isEditing && isPublished) {
+      if (!window.confirm("This job will be published immediately and visible to all visitors. Continue?")) return;
+    }
+
     const payload = {
       id: values.id,
       title: values.title,

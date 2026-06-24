@@ -445,8 +445,7 @@ export const upsertJob = async (input: CMSJobInput) => {
     screeningQuestionKeys: input.screeningQuestionKeys,
     placeholders: input.applicationPlaceholders,
   };
-  const payload = {
-    id: input.id ?? undefined,
+  const basePayload = {
     title: input.title,
     slug: input.slug,
     location: input.location,
@@ -464,8 +463,22 @@ export const upsertJob = async (input: CMSJobInput) => {
     status: input.status,
     posted_at: input.postedAt,
   };
-  const { error } = await supabase!.from("jobs").upsert(payload, { onConflict: "slug" });
-  if (error) throw error;
+
+  if (input.id) {
+    // Existing job — update by primary key only, never match on slug
+    const { error } = await supabase!.from("jobs").update(basePayload).eq("id", input.id);
+    if (error) {
+      if (error.code === "23505") throw new Error("A job with this slug already exists. Please use a unique slug.");
+      throw error;
+    }
+  } else {
+    // New job — insert; slug uniqueness enforced by DB unique constraint
+    const { error } = await supabase!.from("jobs").insert(basePayload);
+    if (error) {
+      if (error.code === "23505") throw new Error("A job with this slug already exists. Please use a unique slug.");
+      throw error;
+    }
+  }
 };
 
 export const deleteJob = async (id: string) => {
