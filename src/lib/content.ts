@@ -588,6 +588,39 @@ export const updateJobApplication = async (
   if (error) throw error;
 };
 
+// De-identified EEO aggregate counts returned by the get_job_eeo_summary() RPC.
+// No individual applicant data is exposed — only per-value counts per dimension.
+export interface JobEeoSummary {
+  jobId: string;
+  jobTitle: string;
+  jobSlug: string;
+  totalResponses: number;
+  raceEthnicityCounts: Record<string, number>;
+  genderCounts: Record<string, number>;
+  veteranStatusCounts: Record<string, number>;
+  disabilityStatusCounts: Record<string, number>;
+}
+
+export const fetchEeoSummary = async (): Promise<JobEeoSummary[]> => {
+  ensureSupabase();
+  const { data, error } = await supabase!.rpc("get_job_eeo_summary");
+  if (error) throw error;
+
+  return ((data as unknown[]) ?? []).map((row) => {
+    const r = row as Record<string, unknown>;
+    return {
+      jobId: String(r.job_id ?? ""),
+      jobTitle: String(r.job_title ?? ""),
+      jobSlug: String(r.job_slug ?? ""),
+      totalResponses: Number(r.total_responses ?? 0),
+      raceEthnicityCounts: (r.race_ethnicity_counts as Record<string, number>) ?? {},
+      genderCounts: (r.gender_counts as Record<string, number>) ?? {},
+      veteranStatusCounts: (r.veteran_status_counts as Record<string, number>) ?? {},
+      disabilityStatusCounts: (r.disability_status_counts as Record<string, number>) ?? {},
+    };
+  });
+};
+
 export const contentSource = {
   isRemote: isSupabaseConfigured,
   fallbackPosts,
