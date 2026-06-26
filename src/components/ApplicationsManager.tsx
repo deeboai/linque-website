@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { ChevronDown, ChevronUp, Download, Loader2, Mail, Phone, PencilLine } from "lucide-react";
+import { Briefcase, ChevronDown, ChevronUp, Download, Loader2, Mail, Phone, PencilLine } from "lucide-react";
 
 import { useEeoSummary, useJobApplications, jobApplicationsQueryKey } from "@/hooks/useContent";
 import { downloadApplicationResume } from "@/lib/storage";
@@ -13,6 +13,7 @@ import {
   eeoVeteranStatusOptions,
   jobApplicationNotificationStatusLabels,
   jobApplicationStatusOptions,
+  type JobApplicationStatus,
 } from "@/lib/jobApplications";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -24,13 +25,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 
-const statusVariantMap = {
+const statusVariantMap: Record<JobApplicationStatus, "default" | "secondary" | "destructive"> = {
   new: "default",
   in_review: "secondary",
   shortlisted: "default",
   rejected: "destructive",
   hired: "default",
-} as const;
+};
+
+const statusLabel: Record<JobApplicationStatus, string> = {
+  new: "New",
+  in_review: "In review",
+  shortlisted: "Shortlisted",
+  rejected: "Rejected",
+  hired: "Hired",
+};
+
+interface JobGroup {
+  jobTitle: string;
+  jobSlug: string;
+  applications: CMSJobApplication[];
+  statusCounts: Record<JobApplicationStatus, number>;
+}
 
 const notificationVariantMap = {
   pending: "secondary",
@@ -70,6 +86,7 @@ export const ApplicationsManager = () => {
   const { data: applications = [], isLoading } = useJobApplications();
   const { data: eeoSummary = [] } = useEeoSummary();
   const [expandedEeoJob, setExpandedEeoJob] = useState<string | null>(null);
+  const [expandedJobGroup, setExpandedJobGroup] = useState<string | null>(null);
   const [selectedApplication, setSelectedApplication] = useState<CMSJobApplication | null>(null);
   const [reviewStatus, setReviewStatus] = useState<(typeof jobApplicationStatusOptions)[number]["value"]>(
     emptySelection.reviewStatus,
@@ -77,7 +94,33 @@ export const ApplicationsManager = () => {
   const [adminNotes, setAdminNotes] = useState(emptySelection.adminNotes);
   const [isDownloadingResume, setIsDownloadingResume] = useState(false);
 
-  const groupedApplications = useMemo(() => applications, [applications]);
+  const jobGroups = useMemo<JobGroup[]>(() => {
+    const map = new Map<string, JobGroup>();
+    const allStatuses: JobApplicationStatus[] = ["new", "in_review", "shortlisted", "rejected", "hired"];
+    for (const app of applications) {
+      const key = app.jobSlug;
+      if (!map.has(key)) {
+        map.set(key, {
+          jobTitle: app.jobTitle,
+          jobSlug: app.jobSlug,
+          applications: [],
+          statusCounts: Object.fromEntries(allStatuses.map((s) => [s, 0])) as Record<JobApplicationStatus, number>,
+        });
+      }
+      const group = map.get(key)!;
+      group.applications.push(app);
+      group.statusCounts[app.reviewStatus] += 1;
+    }
+    // Sort groups by most recent application descending, then alphabetically by title.
+    return [...map.values()].sort((a, b) => {
+      const latestA = a.applications[0]?.createdAt ?? "";
+      const latestB = b.applications[0]?.createdAt ?? "";
+      return latestB.localeCompare(latestA) || a.jobTitle.localeCompare(b.jobTitle);
+    });
+  }, [applications]);
+
+  // Auto-expand the only group so single-job admins don't need an extra click.
+  const resolvedExpandedGroup = expandedJobGroup ?? (jobGroups.length === 1 ? jobGroups[0].jobSlug : null);
 
   const mutation = useMutation({
     mutationFn: ({ id, notes, status }: { id: string; notes: string; status: CMSJobApplication["reviewStatus"] }) =>
@@ -170,45 +213,93 @@ export const ApplicationsManager = () => {
         <div className="flex items-center justify-center py-12 text-muted-foreground">
           <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" /> Loading applications…
         </div>
-      ) : groupedApplications.length === 0 ? (
+      ) : jobGroups.length === 0 ? (
         <div className="rounded-lg border border-dashed border-muted/70 bg-muted/20 p-10 text-center text-muted-foreground">
           No applications have been submitted yet.
         </div>
       ) : (
         <div className="space-y-4">
-          {groupedApplications.map((application) => (
-            <div
-              key={application.id ?? `${application.jobSlug}-${application.email}`}
-              className="flex flex-col gap-4 rounded-xl border border-muted/60 bg-white/80 p-5 shadow-sm md:flex-row md:items-center md:justify-between"
-            >
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-3">
-                  <h3 className="text-lg font-semibold">{application.fullName}</h3>
-                  <Badge variant={statusVariantMap[application.reviewStatus]}>{application.reviewStatus.replace("_", " ")}</Badge>
-                  <Badge variant={notificationVariantMap[application.notificationStatus]}>
-                    {jobApplicationNotificationStatusLabels[application.notificationStatus]}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {application.jobTitle} · Submitted{" "}
-                  {application.createdAt ? format(new Date(application.createdAt), "MMM d, yyyy") : "recently"}
-                </p>
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                  <span className="inline-flex items-center gap-2">
-                    <Mail className="h-4 w-4" aria-hidden="true" /> {application.email}
-                  </span>
-                  <span className="inline-flex items-center gap-2">
-                    <Phone className="h-4 w-4" aria-hidden="true" /> {application.phone}
-                  </span>
-                </div>
+          {jobGroups.map((group) => {
+            const isExpanded = resolvedExpandedGroup === group.jobSlug;
+            const activeStatuses = (Object.entries(group.statusCounts) as [JobApplicationStatus, number][]).filter(
+              ([, n]) => n > 0,
+            );
+            return (
+              <div key={group.jobSlug} className="overflow-hidden rounded-xl border border-muted/60 bg-white/80 shadow-sm">
+                {/* Job group header — click to expand/collapse */}
+                <button
+                  type="button"
+                  className="flex w-full items-start justify-between gap-4 px-5 py-4 text-left hover:bg-muted/10 transition-colors"
+                  onClick={() => setExpandedJobGroup(isExpanded ? null : group.jobSlug)}
+                  aria-expanded={isExpanded}
+                >
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Briefcase className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                      <h3 className="text-base font-semibold text-foreground">{group.jobTitle}</h3>
+                      <Badge variant="secondary">
+                        {group.applications.length} applicant{group.applications.length !== 1 ? "s" : ""}
+                      </Badge>
+                    </div>
+                    {/* Per-status aggregate tags */}
+                    <div className="flex flex-wrap gap-2">
+                      {activeStatuses.map(([status, count]) => (
+                        <Badge key={status} variant={statusVariantMap[status]} className="text-xs">
+                          {count} {statusLabel[status].toLowerCase()}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                  {isExpanded ? (
+                    <ChevronUp className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  ) : (
+                    <ChevronDown className="mt-1 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  )}
+                </button>
+
+                {/* Individual applicant cards */}
+                {isExpanded && (
+                  <div className="border-t border-muted/50 divide-y divide-muted/40">
+                    {group.applications.map((application) => (
+                      <div
+                        key={application.id ?? `${application.jobSlug}-${application.email}`}
+                        className="flex flex-col gap-4 px-5 py-4 md:flex-row md:items-center md:justify-between"
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-foreground">{application.fullName}</p>
+                            <Badge variant={statusVariantMap[application.reviewStatus]}>
+                              {statusLabel[application.reviewStatus]}
+                            </Badge>
+                            <Badge variant={notificationVariantMap[application.notificationStatus]}>
+                              {jobApplicationNotificationStatusLabels[application.notificationStatus]}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Submitted{" "}
+                            {application.createdAt
+                              ? format(new Date(application.createdAt), "MMM d, yyyy")
+                              : "recently"}
+                          </p>
+                          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                            <span className="inline-flex items-center gap-1.5">
+                              <Mail className="h-3.5 w-3.5" aria-hidden="true" /> {application.email}
+                            </span>
+                            <span className="inline-flex items-center gap-1.5">
+                              <Phone className="h-3.5 w-3.5" aria-hidden="true" /> {application.phone}
+                            </span>
+                          </div>
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => openApplication(application)}>
+                          <PencilLine className="mr-2 h-3.5 w-3.5" /> Review
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => openApplication(application)}>
-                  <PencilLine className="mr-2 h-4 w-4" /> Review
-                </Button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
