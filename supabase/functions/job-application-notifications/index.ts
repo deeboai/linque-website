@@ -313,26 +313,25 @@ const buildInternalEmail = (application: JobApplicationRecord, resumeUrl: string
 };
 
 const buildApplicantEmail = (application: JobApplicationRecord) => {
-  const submissionDate = formatDate(new Date().toISOString());
   const text = [
-    `Hi ${application.full_name},`,
+    "Dear Applicant,",
     "",
-    `We received your application for ${application.job_title} on ${submissionDate}.`,
+    `Thank you for your interest in the ${application.job_title} position at Linque Resourcing.`,
     "",
-    "Our team will review your submission and follow up if your background aligns with the role.",
+    "Your application is important to us, we will review your skills and experience against the needs of the position and other applicants.",
     "",
-    "Thank you,",
-    "Linque Resourcing",
+    "Once we have reviewed your details, we will respond to let you know the status of your application.",
+    "",
+    "Linque Resourcing Recruitment Team",
   ].join("\n");
 
   const html = `
-    <div style="font-family: Arial, sans-serif; color: #172119; line-height: 1.6;">
-      <h1 style="margin-bottom: 8px;">Application received</h1>
-      <p style="margin-top: 0;">Hi ${escapeHtml(application.full_name)},</p>
-      <p>We received your application for <strong>${escapeHtml(application.job_title)}</strong> on ${escapeHtml(submissionDate)}.</p>
-      <p>Our team will review your submission and follow up if your background aligns with the role.</p>
-      <p style="margin-bottom: 0;">Thank you,</p>
-      <p style="margin-top: 0;"><strong>Linque Resourcing</strong></p>
+    <div style="font-family: Arial, sans-serif; color: #172119; line-height: 1.6; max-width: 600px;">
+      <p style="margin-top: 0;">Dear Applicant,</p>
+      <p>Thank you for your interest in the <strong>${escapeHtml(application.job_title)}</strong> position at Linque Resourcing.</p>
+      <p>Your application is important to us, we will review your skills and experience against the needs of the position and other applicants.</p>
+      <p>Once we have reviewed your details, we will respond to let you know the status of your application.</p>
+      <p style="margin-bottom: 0;">Linque Resourcing Recruitment Team</p>
     </div>
   `;
 
