@@ -43,30 +43,51 @@ const Contact = () => {
   const contactEndpoint = import.meta.env.VITE_CONTACT_ENDPOINT;
 
   const onSubmit = async (values: ContactFormValues) => {
+    if (!contactEndpoint) {
+      toast({
+        title: "Configuration error",
+        description: "Contact endpoint is not configured. Please email info@linqueresourcing.com directly.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
-    const mailtoSubject = encodeURIComponent(values.subject.trim());
-    const bodyLines = [
-      values.message.trim(),
-      "",
-      "—",
-      `Name: ${values.name.trim()}`,
-      `Work email: ${values.email.trim()}`,
-      `Company: ${values.company.trim()}`,
-    ];
-    const mailtoBody = encodeURIComponent(bodyLines.join("\n"));
+    try {
+      const response = await fetch(contactEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
 
-    const mailtoUrl = `mailto:info@linqueresourcing.com?subject=${mailtoSubject}&body=${mailtoBody}`;
+      const data = await response.json().catch(() => null);
 
-    window.location.href = mailtoUrl;
+      if (!response.ok) {
+        const message =
+          typeof data === "object" && data && "error" in data && typeof data.error === "string"
+            ? data.error
+            : "Something went wrong. Please try again or email us directly.";
+        throw new Error(message);
+      }
 
-    toast({
-      title: "Opening your email app",
-      description: "If nothing appears, email info@linqueresourcing.com directly.",
-    });
-
-    form.reset();
-    setIsSubmitting(false);
+      toast({
+        title: "Message sent",
+        description: "Thanks for reaching out — we'll get back to you within one business day.",
+      });
+      form.reset();
+    } catch (error) {
+      toast({
+        title: "Failed to send message",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Something went wrong. Please try again or email info@linqueresourcing.com directly.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
