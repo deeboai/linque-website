@@ -76,6 +76,7 @@ type JobFormValues = {
   applyUrl: string;
   applicationsEnabled: boolean;
   screeningQuestionKeys: ScreeningQuestionKey[];
+  requiredScreeningQuestionKeys: ScreeningQuestionKey[];
   applicationPlaceholders: JobApplicationPlaceholders;
   status: PublishStatus;
   postedAt: string;
@@ -170,6 +171,7 @@ const mapJobToFormValues = (job?: CMSJob): JobFormValues => ({
   applyUrl: job?.applyUrl ?? "",
   applicationsEnabled: job?.applicationsEnabled ?? defaultJobApplicationSettings.applicationsEnabled,
   screeningQuestionKeys: job?.screeningQuestionKeys ?? [],
+  requiredScreeningQuestionKeys: job?.requiredScreeningQuestionKeys ?? [],
   applicationPlaceholders: job?.applicationPlaceholders ?? defaultJobApplicationSettings.placeholders,
   status: job?.status ?? "draft",
   postedAt: toDateInputValue(job?.postedAt),
@@ -1000,6 +1002,9 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
       applyUrl: values.applyUrl || null,
       applicationsEnabled: values.applicationsEnabled,
       screeningQuestionKeys: values.screeningQuestionKeys,
+      requiredScreeningQuestionKeys: values.requiredScreeningQuestionKeys.filter((key) =>
+        values.screeningQuestionKeys.includes(key),
+      ),
       applicationPlaceholders: values.applicationPlaceholders,
       status: values.status,
       postedAt: toIsoIfValue(values.postedAt),
@@ -1105,7 +1110,13 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
                       <ul className="list-disc list-inside space-y-1 text-gray-700">
                         {formValues.screeningQuestionKeys.map((questionKey) => {
                           const definition = screeningQuestionDefinitions.find((item) => item.key === questionKey);
-                          return <li key={questionKey}>{definition?.title ?? questionKey}</li>;
+                          const isRequired = formValues.requiredScreeningQuestionKeys.includes(questionKey);
+                          return (
+                            <li key={questionKey}>
+                              {definition?.title ?? questionKey}
+                              {isRequired && <span className="ml-2 text-xs font-semibold text-red-600">(required)</span>}
+                            </li>
+                          );
                         })}
                       </ul>
                     ) : (
@@ -1229,7 +1240,9 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
                   <div className="grid gap-3 md:grid-cols-2">
                     {screeningQuestionDefinitions.map((question) => {
                       const selectedKeys = watch("screeningQuestionKeys");
+                      const requiredKeys = watch("requiredScreeningQuestionKeys");
                       const isChecked = selectedKeys.includes(question.key);
+                      const isRequired = requiredKeys.includes(question.key);
                       return (
                         <div key={question.key} className="rounded-xl border border-muted/50 bg-white/70 p-4 space-y-2">
                           <div className="flex items-start gap-3">
@@ -1241,6 +1254,13 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
                                   ? [...selectedKeys, question.key]
                                   : selectedKeys.filter((key) => key !== question.key);
                                 setValue("screeningQuestionKeys", nextKeys);
+                                // Drop the required flag if the question is removed from the bank.
+                                if (!checked) {
+                                  setValue(
+                                    "requiredScreeningQuestionKeys",
+                                    requiredKeys.filter((key) => key !== question.key),
+                                  );
+                                }
                               }}
                             />
                             <div className="space-y-1">
@@ -1248,6 +1268,26 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
                               <p className="text-xs text-muted-foreground">{question.description}</p>
                             </div>
                           </div>
+                          {isChecked && (
+                            <label
+                              htmlFor={`screening-required-${question.key}`}
+                              className="ml-7 flex cursor-pointer items-center gap-2 text-xs font-medium text-muted-foreground"
+                            >
+                              <Checkbox
+                                id={`screening-required-${question.key}`}
+                                checked={isRequired}
+                                onCheckedChange={(checked) => {
+                                  setValue(
+                                    "requiredScreeningQuestionKeys",
+                                    checked
+                                      ? [...requiredKeys, question.key]
+                                      : requiredKeys.filter((key) => key !== question.key),
+                                  );
+                                }}
+                              />
+                              Required question
+                            </label>
+                          )}
                         </div>
                       );
                     })}

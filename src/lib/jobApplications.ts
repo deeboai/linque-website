@@ -43,6 +43,8 @@ export interface JobApplicationPlaceholders {
 export interface JobApplicationSettings {
   applicationsEnabled: boolean;
   screeningQuestionKeys: ScreeningQuestionKey[];
+  // Subset of screeningQuestionKeys that applicants must answer before the form will submit.
+  requiredScreeningQuestionKeys: ScreeningQuestionKey[];
   placeholders: JobApplicationPlaceholders;
 }
 
@@ -89,6 +91,7 @@ export interface ScreeningQuestionDefinition {
 export const defaultJobApplicationSettings: JobApplicationSettings = {
   applicationsEnabled: false,
   screeningQuestionKeys: [],
+  requiredScreeningQuestionKeys: [],
   placeholders: {
     experienceArea: "",
     commuteLocation: "",
@@ -241,10 +244,19 @@ export const normalizeJobApplicationSettings = (value: unknown): JobApplicationS
   const rawPlaceholders =
     typeof raw.placeholders === "object" && raw.placeholders ? raw.placeholders : defaultJobApplicationSettings.placeholders;
 
+  const screeningQuestionKeys = Array.isArray(raw.screeningQuestionKeys)
+    ? raw.screeningQuestionKeys.filter((key): key is ScreeningQuestionKey => key in screeningQuestionDefinitionMap)
+    : [];
+
   return {
     applicationsEnabled: Boolean(raw.applicationsEnabled),
-    screeningQuestionKeys: Array.isArray(raw.screeningQuestionKeys)
-      ? raw.screeningQuestionKeys.filter((key): key is ScreeningQuestionKey => key in screeningQuestionDefinitionMap)
+    screeningQuestionKeys,
+    // A question can only be required if it is also part of the selected question bank for this role.
+    requiredScreeningQuestionKeys: Array.isArray(raw.requiredScreeningQuestionKeys)
+      ? raw.requiredScreeningQuestionKeys.filter(
+          (key): key is ScreeningQuestionKey =>
+            key in screeningQuestionDefinitionMap && screeningQuestionKeys.includes(key),
+        )
       : [],
     placeholders: {
       experienceArea: String((rawPlaceholders as Partial<JobApplicationPlaceholders>).experienceArea ?? ""),
@@ -264,5 +276,6 @@ export const buildScreeningQuestions = (settings: JobApplicationSettings) =>
     return {
       ...definition,
       question: definition.getQuestion(settings.placeholders),
+      required: settings.requiredScreeningQuestionKeys.includes(key),
     };
   });

@@ -97,6 +97,20 @@ const isResumeFileAllowed = (file: File) => {
   return resumeAllowedMimeTypes.includes(file.type) || resumeAllowedExtensions.includes(extension);
 };
 
+// Shared client-side type checks so invalid emails/phones are caught before we touch storage or the database.
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const validateEmail = (value: string) => emailPattern.test(value.trim()) || "Enter a valid email address.";
+const validatePhone = (value: string) =>
+  value.replace(/\D/g, "").length >= 10 || "Enter a valid phone number with at least 10 digits.";
+
+// Small red helper rendered beneath a field. The data-field-error hook lets us scroll to the first error on submit.
+const FieldError = ({ message }: { message?: string }) =>
+  message ? (
+    <p data-field-error className="mt-1 text-sm font-medium text-red-600">
+      {message}
+    </p>
+  ) : null;
+
 interface JobApplicationFormProps {
   job: CMSJob;
 }
@@ -106,7 +120,15 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [wasSubmitted, setWasSubmitted] = useState(false);
-  const { register, handleSubmit, reset, setValue, watch, control } = useForm<JobApplicationFormValues>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    control,
+    formState: { errors },
+  } = useForm<JobApplicationFormValues>({
     defaultValues,
   });
 
@@ -119,6 +141,7 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
     () => ({
       applicationsEnabled: job.applicationsEnabled,
       screeningQuestionKeys: job.screeningQuestionKeys,
+      requiredScreeningQuestionKeys: job.requiredScreeningQuestionKeys ?? [],
       placeholders: job.applicationPlaceholders ?? defaultJobApplicationSettings.placeholders,
     }),
     [job],
@@ -176,16 +199,6 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
       toast({
         title: "Resume required",
         description: "Please attach your resume before submitting.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Select components are controlled outside native form submission, so their required checks live here.
-    if (!values.workAuthorization || !values.highestEducation || !values.backgroundCheckConsent) {
-      toast({
-        title: "Missing required information",
-        description: "Please complete the work authorization, education, and background screening fields.",
         variant: "destructive",
       });
       return;
@@ -282,17 +295,44 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
     }
   };
 
+  // Fires when react-hook-form validation fails: pop a notification and scroll the applicant back to the first error.
+  const onInvalid = () => {
+    toast({
+      title: "Please review your application",
+      description:
+        "Some required fields are missing or contain invalid information. We've highlighted them in red below.",
+      variant: "destructive",
+    });
+
+    // Wait for the error messages to render, then bring the first one into view.
+    window.setTimeout(() => {
+      const firstError = document.querySelector<HTMLElement>("[data-field-error]");
+      firstError?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 50);
+  };
+
   if (!job.applicationsEnabled) {
     return null;
   }
+
+  // The Select components below are controlled via watch/setValue, so we register them here (without spreading the
+  // returned props) purely to attach react-hook-form validation rules. Required screening questions register the same way.
+  register("workAuthorization", { required: "Select your work authorization status." });
+  register("highestEducation", { required: "Select your highest education level." });
+  register("backgroundCheckConsent", { required: "Select a background screening option." });
+  screeningQuestions.forEach((question) => {
+    register(`screeningAnswers.${question.key}`, {
+      required: question.required ? "This question is required." : false,
+    });
+  });
 
   return (
     <Card id="apply" className="border border-muted/60 bg-white/95 p-8 shadow-card space-y-6">
       <div className="space-y-2">
         <h2 className="text-2xl font-semibold text-foreground">Apply for this role</h2>
         <p className="text-sm text-muted-foreground">
-          Submit your application directly through Linque Resourcing&apos;s careers workflow. Required fields are marked
-          by the browser and validated before submission.
+          Submit your application directly through Linque Resourcing&apos;s careers workflow. Required fields are
+          validated before submission, and any that are missing or invalid will be highlighted in red.
         </p>
       </div>
 
@@ -303,36 +343,67 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-8" noValidate>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="application-full-name">Full name</Label>
-            <Input id="application-full-name" {...register("fullName", { required: true })} />
+            <Input
+              id="application-full-name"
+              aria-invalid={Boolean(errors.fullName)}
+              {...register("fullName", { required: "Full name is required." })}
+            />
+            <FieldError message={errors.fullName?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="application-email">Email address</Label>
-            <Input id="application-email" type="email" {...register("email", { required: true })} />
+            <Input
+              id="application-email"
+              type="email"
+              aria-invalid={Boolean(errors.email)}
+              {...register("email", { required: "Email address is required.", validate: validateEmail })}
+            />
+            <FieldError message={errors.email?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="application-phone">Phone number</Label>
-            <Input id="application-phone" {...register("phone", { required: true })} />
+            <Input
+              id="application-phone"
+              type="tel"
+              aria-invalid={Boolean(errors.phone)}
+              {...register("phone", { required: "Phone number is required.", validate: validatePhone })}
+            />
+            <FieldError message={errors.phone?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="application-desired-pay">Desired pay</Label>
-            <Input id="application-desired-pay" {...register("desiredPay", { required: true })} />
+            <Input
+              id="application-desired-pay"
+              aria-invalid={Boolean(errors.desiredPay)}
+              {...register("desiredPay", { required: "Desired pay is required." })}
+            />
+            <FieldError message={errors.desiredPay?.message} />
           </div>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="application-address">Address</Label>
-          <Textarea id="application-address" rows={2} {...register("address", { required: true })} />
+          <Textarea
+            id="application-address"
+            rows={2}
+            aria-invalid={Boolean(errors.address)}
+            {...register("address", { required: "Address is required." })}
+          />
+          <FieldError message={errors.address?.message} />
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
             <Label>Work authorization</Label>
-            <Select value={watch("workAuthorization")} onValueChange={(value) => setValue("workAuthorization", value)}>
-              <SelectTrigger>
+            <Select
+              value={watch("workAuthorization")}
+              onValueChange={(value) => setValue("workAuthorization", value, { shouldValidate: true })}
+            >
+              <SelectTrigger aria-invalid={Boolean(errors.workAuthorization)}>
                 <SelectValue placeholder="Select an option" />
               </SelectTrigger>
               <SelectContent>
@@ -340,15 +411,25 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
                 <SelectItem value="no">No, I am not currently authorized to work in the United States</SelectItem>
               </SelectContent>
             </Select>
+            <FieldError message={errors.workAuthorization?.message} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="application-start-date">Available start date</Label>
-            <Input id="application-start-date" type="date" {...register("availableStartDate", { required: true })} />
+            <Input
+              id="application-start-date"
+              type="date"
+              aria-invalid={Boolean(errors.availableStartDate)}
+              {...register("availableStartDate", { required: "Available start date is required." })}
+            />
+            <FieldError message={errors.availableStartDate?.message} />
           </div>
           <div className="space-y-2">
             <Label>Highest education obtained</Label>
-            <Select value={watch("highestEducation")} onValueChange={(value) => setValue("highestEducation", value)}>
-              <SelectTrigger>
+            <Select
+              value={watch("highestEducation")}
+              onValueChange={(value) => setValue("highestEducation", value, { shouldValidate: true })}
+            >
+              <SelectTrigger aria-invalid={Boolean(errors.highestEducation)}>
                 <SelectValue placeholder="Select education level" />
               </SelectTrigger>
               <SelectContent>
@@ -359,12 +440,19 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
                 ))}
               </SelectContent>
             </Select>
+            <FieldError message={errors.highestEducation?.message} />
           </div>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="application-interest">Why are you interested in this role?</Label>
-          <Textarea id="application-interest" rows={4} {...register("whyInterested", { required: true })} />
+          <Textarea
+            id="application-interest"
+            rows={4}
+            aria-invalid={Boolean(errors.whyInterested)}
+            {...register("whyInterested", { required: "Please tell us why you're interested in this role." })}
+          />
+          <FieldError message={errors.whyInterested?.message} />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
@@ -372,9 +460,9 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
             <Label>Background screening</Label>
             <Select
               value={watch("backgroundCheckConsent")}
-              onValueChange={(value) => setValue("backgroundCheckConsent", value)}
+              onValueChange={(value) => setValue("backgroundCheckConsent", value, { shouldValidate: true })}
             >
-              <SelectTrigger>
+              <SelectTrigger aria-invalid={Boolean(errors.backgroundCheckConsent)}>
                 <SelectValue placeholder="Select an option" />
               </SelectTrigger>
               <SelectContent>
@@ -382,6 +470,7 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
                 <SelectItem value="no">No, I am not willing to undergo a background screening</SelectItem>
               </SelectContent>
             </Select>
+            <FieldError message={errors.backgroundCheckConsent?.message} />
           </div>
           <div className="space-y-3 rounded-xl border border-muted/50 bg-muted/10 px-4 py-3">
             <div className="flex items-start gap-3">
@@ -442,7 +531,15 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor={`reference-email-${index}`}>Email</Label>
-                    <Input id={`reference-email-${index}`} type="email" {...register(`professionalReferences.${index}.email`)} />
+                    <Input
+                      id={`reference-email-${index}`}
+                      type="email"
+                      aria-invalid={Boolean(errors.professionalReferences?.[index]?.email)}
+                      {...register(`professionalReferences.${index}.email`, {
+                        validate: (value) => !value || emailPattern.test(value.trim()) || "Enter a valid email address.",
+                      })}
+                    />
+                    <FieldError message={errors.professionalReferences?.[index]?.email?.message} />
                   </div>
                 </div>
               </div>
@@ -459,37 +556,51 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
               </p>
             </div>
             <div className="space-y-4">
-              {screeningQuestions.map((question) => (
-                <div key={question.key} className="rounded-xl border border-muted/60 bg-muted/10 p-4 space-y-2">
-                  <Label className="text-sm font-semibold text-foreground">{question.question}</Label>
-                  {question.answerType === "short_text" ? (
-                    <Input {...register(`screeningAnswers.${question.key}`)} />
-                  ) : (
-                    <Select
-                      value={watch(`screeningAnswers.${question.key}`)}
-                      onValueChange={(value) => setValue(`screeningAnswers.${question.key}`, value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an option" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {question.answerType === "scale_1_5" ? (
-                          ["1", "2", "3", "4", "5"].map((value) => (
-                            <SelectItem key={value} value={value}>
-                              {value}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <>
-                            <SelectItem value="yes">Yes</SelectItem>
-                            <SelectItem value="no">No</SelectItem>
-                          </>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              ))}
+              {screeningQuestions.map((question) => {
+                const questionError = errors.screeningAnswers?.[question.key]?.message;
+                return (
+                  <div key={question.key} className="rounded-xl border border-muted/60 bg-muted/10 p-4 space-y-2">
+                    <Label className="text-sm font-semibold text-foreground">
+                      {question.question}
+                      {question.required && <span className="ml-1 text-red-600">*</span>}
+                    </Label>
+                    {question.answerType === "short_text" ? (
+                      <Input
+                        aria-invalid={Boolean(questionError)}
+                        {...register(`screeningAnswers.${question.key}`, {
+                          required: question.required ? "This question is required." : false,
+                        })}
+                      />
+                    ) : (
+                      <Select
+                        value={watch(`screeningAnswers.${question.key}`)}
+                        onValueChange={(value) =>
+                          setValue(`screeningAnswers.${question.key}`, value, { shouldValidate: true })
+                        }
+                      >
+                        <SelectTrigger aria-invalid={Boolean(questionError)}>
+                          <SelectValue placeholder="Select an option" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {question.answerType === "scale_1_5" ? (
+                            ["1", "2", "3", "4", "5"].map((value) => (
+                              <SelectItem key={value} value={value}>
+                                {value}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <>
+                              <SelectItem value="yes">Yes</SelectItem>
+                              <SelectItem value="no">No</SelectItem>
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    <FieldError message={questionError} />
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

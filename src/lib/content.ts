@@ -56,6 +56,7 @@ export interface CMSJob {
   applyUrl?: string | null;
   applicationsEnabled: boolean;
   screeningQuestionKeys: ScreeningQuestionKey[];
+  requiredScreeningQuestionKeys: ScreeningQuestionKey[];
   applicationPlaceholders: JobApplicationPlaceholders;
   status: PublishStatus;
   postedAt: string | null;
@@ -147,6 +148,7 @@ const mapJobPosting = (job: JobPosting): CMSJob => ({
   applyUrl: job.applyUrl ?? null,
   applicationsEnabled: false,
   screeningQuestionKeys: [],
+  requiredScreeningQuestionKeys: [],
   applicationPlaceholders: defaultJobApplicationSettings.placeholders,
   status: "published",
   postedAt: job.postedAt,
@@ -267,6 +269,7 @@ const adaptJobFromSupabase = (record: SupabaseJobRow): CMSJob => ({
       applyUrl: record.apply_url ?? null,
       applicationsEnabled: applicationSettings.applicationsEnabled,
       screeningQuestionKeys: applicationSettings.screeningQuestionKeys,
+      requiredScreeningQuestionKeys: applicationSettings.requiredScreeningQuestionKeys,
       applicationPlaceholders: applicationSettings.placeholders,
       status: (record.status as PublishStatus) ?? "draft",
       postedAt: record.posted_at ?? null,
@@ -443,6 +446,10 @@ export const upsertJob = async (input: CMSJobInput) => {
   const applicationSettings = {
     applicationsEnabled: input.applicationsEnabled,
     screeningQuestionKeys: input.screeningQuestionKeys,
+    // Keep required keys constrained to the selected question bank so stale flags never persist.
+    requiredScreeningQuestionKeys: input.requiredScreeningQuestionKeys.filter((key) =>
+      input.screeningQuestionKeys.includes(key),
+    ),
     placeholders: input.applicationPlaceholders,
   };
   const basePayload = {
