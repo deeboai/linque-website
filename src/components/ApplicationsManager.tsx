@@ -1,12 +1,19 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Download, Loader2, Mail, Phone, PencilLine } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, Loader2, Mail, Phone, PencilLine } from "lucide-react";
 
-import { useJobApplications, jobApplicationsQueryKey } from "@/hooks/useContent";
+import { useEeoSummary, useJobApplications, jobApplicationsQueryKey } from "@/hooks/useContent";
 import { downloadApplicationResume } from "@/lib/storage";
-import { updateJobApplication, type CMSJobApplication } from "@/lib/content";
-import { jobApplicationNotificationStatusLabels, jobApplicationStatusOptions } from "@/lib/jobApplications";
+import { updateJobApplication, type CMSJobApplication, type JobEeoSummary } from "@/lib/content";
+import {
+  eeoDisabilityStatusOptions,
+  eeoGenderOptions,
+  eeoRaceEthnicityOptions,
+  eeoVeteranStatusOptions,
+  jobApplicationNotificationStatusLabels,
+  jobApplicationStatusOptions,
+} from "@/lib/jobApplications";
 import { useToast } from "@/components/ui/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,10 +41,35 @@ const notificationVariantMap = {
 
 const emptySelection = { reviewStatus: "new" as const, adminNotes: "" };
 
+// Label look-up maps built from the shared option arrays so we display human-readable values.
+const raceLabels = Object.fromEntries(eeoRaceEthnicityOptions.map((o) => [o.value, o.label]));
+const genderLabels = Object.fromEntries(eeoGenderOptions.map((o) => [o.value, o.label]));
+const veteranLabels = Object.fromEntries(eeoVeteranStatusOptions.map((o) => [o.value, o.label]));
+const disabilityLabels = Object.fromEntries(eeoDisabilityStatusOptions.map((o) => [o.value, o.label]));
+
+const EeoCountList = ({
+  counts,
+  labels,
+}: {
+  counts: Record<string, number>;
+  labels: Record<string, string>;
+}) => (
+  <ul className="space-y-1">
+    {Object.entries(counts).map(([value, count]) => (
+      <li key={value} className="flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">{labels[value] ?? value}</span>
+        <span className="ml-4 font-semibold tabular-nums text-foreground">{count}</span>
+      </li>
+    ))}
+  </ul>
+);
+
 export const ApplicationsManager = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: applications = [], isLoading } = useJobApplications();
+  const { data: eeoSummary = [] } = useEeoSummary();
+  const [expandedEeoJob, setExpandedEeoJob] = useState<string | null>(null);
   const [selectedApplication, setSelectedApplication] = useState<CMSJobApplication | null>(null);
   const [reviewStatus, setReviewStatus] = useState<(typeof jobApplicationStatusOptions)[number]["value"]>(
     emptySelection.reviewStatus,
@@ -348,6 +380,67 @@ export const ApplicationsManager = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {eeoSummary.length > 0 && (
+        <>
+          <Separator className="my-6" />
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">EEO Summary</h2>
+              <p className="text-sm text-muted-foreground">
+                De-identified Equal Opportunity aggregate counts per job posting. Individual responses are never
+                attributed to a specific applicant.
+              </p>
+            </div>
+            <div className="space-y-3">
+              {eeoSummary.map((summary: JobEeoSummary) => {
+                const isExpanded = expandedEeoJob === summary.jobId;
+                return (
+                  <div key={summary.jobId} className="rounded-xl border border-muted/60 bg-white/80">
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+                      onClick={() => setExpandedEeoJob(isExpanded ? null : summary.jobId)}
+                      aria-expanded={isExpanded}
+                    >
+                      <div>
+                        <p className="font-semibold text-foreground">{summary.jobTitle}</p>
+                        <p className="text-sm text-muted-foreground">{summary.totalResponses} EEO response{summary.totalResponses !== 1 ? "s" : ""}</p>
+                      </div>
+                      {isExpanded ? (
+                        <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                      )}
+                    </button>
+
+                    {isExpanded && (
+                      <div className="grid gap-6 border-t border-muted/50 px-5 py-5 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Race / Ethnicity</p>
+                          <EeoCountList counts={summary.raceEthnicityCounts} labels={raceLabels} />
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Gender</p>
+                          <EeoCountList counts={summary.genderCounts} labels={genderLabels} />
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Veteran Status</p>
+                          <EeoCountList counts={summary.veteranStatusCounts} labels={veteranLabels} />
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Disability Status</p>
+                          <EeoCountList counts={summary.disabilityStatusCounts} labels={disabilityLabels} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
     </Card>
   );
 };

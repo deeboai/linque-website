@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   contentSource,
+  fetchEeoSummary,
   fetchJobApplications,
   fetchJobBySlug,
   fetchJobs,
@@ -10,11 +11,13 @@ import {
   type CMSJob,
   type CMSPost,
   type FetchOptions,
+  type JobEeoSummary,
 } from "@/lib/content";
 
 const basePostsKey = "posts";
 const baseJobsKey = "jobs";
 const baseApplicationsKey = "job-applications";
+const baseEeoSummaryKey = "eeo-summary";
 
 export const postsQueryKey = (options?: FetchOptions) => [basePostsKey, options?.includeDrafts ?? false];
 export const jobsQueryKey = (options?: FetchOptions) => [baseJobsKey, options?.includeDrafts ?? false];
@@ -90,4 +93,14 @@ export const useJobApplications = () =>
     queryFn: () => fetchJobApplications(),
     staleTime: 30 * 1000,
     initialData: [] as CMSJobApplication[],
+  });
+
+export const eeoSummaryQueryKey = () => [baseEeoSummaryKey];
+
+export const useEeoSummary = () =>
+  useQuery({
+    queryKey: eeoSummaryQueryKey(),
+    queryFn: () => fetchEeoSummary(),
+    staleTime: 60 * 1000,
+    initialData: [] as JobEeoSummary[],
   });

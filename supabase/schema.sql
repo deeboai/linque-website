@@ -97,7 +97,9 @@ create table if not exists public.job_application_eeo (
   gender text not null,
   veteran_status text not null,
   disability_status text not null,
-  notification_status text not null default 'pending',
+  -- notification_* columns retained for backwards-compat with the retired EEO email edge function.
+  -- They can be dropped once the DB trigger is removed and the column is confirmed unused.
+  notification_status text not null default 'sent',
   notification_error text,
   notification_attempted_at timestamptz,
   notification_email_id text,
@@ -189,7 +191,8 @@ begin
   )
   returning id into inserted_application_id;
 
-  perform private.queue_job_application_eeo_notification(inserted_application_id);
+  -- EEO email notifications were retired; individual EEO responses are no longer forwarded
+  -- to a compliance inbox. Aggregate counts are surfaced in the admin dashboard instead.
 
   return inserted_application_id;
 end;
@@ -350,60 +353,84 @@ create trigger queue_job_application_notification
 after insert on public.job_applications
 for each row execute function private.queue_job_application_notification();
 
-create or replace function private.queue_job_application_eeo_notification(target_application_id uuid)
-returns void
+-- EEO notifications were retired. The private.queue_job_application_eeo_notification function
+-- and its trigger have been removed. Run the following in the Supabase SQL editor on existing
+-- databases to clean up the retired objects:
+--   drop trigger if exists queue_job_application_eeo_notification on public.job_application_eeo;
+--   drop function if exists private.queue_job_application_eeo_notification(uuid);
+
+-- Returns de-identified EEO aggregate counts per job for the admin dashboard.
+-- Security definer so authenticated callers can read counts without direct table access.
+create or replace function public.get_job_eeo_summary()
+returns table (
+  job_id uuid,
+  job_title text,
+  job_slug text,
+  total_responses bigint,
+  race_ethnicity_counts jsonb,
+  gender_counts jsonb,
+  veteran_status_counts jsonb,
+  disability_status_counts jsonb
+)
 language plpgsql
 security definer
-set search_path = public, private
+set search_path = public
 as $$
-declare
-  function_url text;
-  webhook_secret text;
 begin
-  -- EEO notifications are routed through a separate endpoint so only the compliance inbox receives this data.
-  select value
-  into function_url
-  from private.application_integration_settings
-  where key = 'job_application_eeo_notifications_url'
-  order by updated_at desc
-  limit 1;
-
-  select value
-  into webhook_secret
-  from private.application_integration_settings
-  where key = 'job_application_eeo_webhook_secret'
-  order by updated_at desc
-  limit 1;
-
-  if function_url is null or webhook_secret is null then
-    raise log 'Job application EEO notification secrets are not configured; skipping application %', target_application_id;
-    return;
-  end if;
-
-  perform net.http_post(
-    url := function_url,
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'x-webhook-secret', webhook_secret
-    ),
-    body := jsonb_build_object(
-      'applicationId', target_application_id,
-      'source', 'job_application_insert'
-    ),
-    timeout_milliseconds := 5000
-  );
-
-  return;
-exception
-  when others then
-    raise log 'Job application EEO notification enqueue failed for %: %', target_application_id, SQLERRM;
-    return;
+  return query
+  select
+    base.job_id,
+    j.title as job_title,
+    j.slug  as job_slug,
+    base.total_responses,
+    (
+      select jsonb_object_agg(rc.race_ethnicity, rc.cnt)
+      from (
+        select race_ethnicity, count(*)::bigint as cnt
+        from public.job_application_eeo r
+        where r.job_id = base.job_id
+        group by race_ethnicity
+      ) rc
+    ) as race_ethnicity_counts,
+    (
+      select jsonb_object_agg(gc.gender, gc.cnt)
+      from (
+        select gender, count(*)::bigint as cnt
+        from public.job_application_eeo g
+        where g.job_id = base.job_id
+        group by gender
+      ) gc
+    ) as gender_counts,
+    (
+      select jsonb_object_agg(vc.veteran_status, vc.cnt)
+      from (
+        select veteran_status, count(*)::bigint as cnt
+        from public.job_application_eeo v
+        where v.job_id = base.job_id
+        group by veteran_status
+      ) vc
+    ) as veteran_status_counts,
+    (
+      select jsonb_object_agg(dc.disability_status, dc.cnt)
+      from (
+        select disability_status, count(*)::bigint as cnt
+        from public.job_application_eeo d
+        where d.job_id = base.job_id
+        group by disability_status
+      ) dc
+    ) as disability_status_counts
+  from (
+    select job_id, count(*)::bigint as total_responses
+    from public.job_application_eeo
+    group by job_id
+  ) base
+  join public.jobs j on j.id = base.job_id
+  order by base.total_responses desc;
 end;
 $$;
 
-revoke all on function private.queue_job_application_eeo_notification(uuid) from public, anon, authenticated;
-
-drop trigger if exists queue_job_application_eeo_notification on public.job_application_eeo;
+-- Only authenticated admins can call this; security definer bypasses RLS on job_application_eeo.
+grant execute on function public.get_job_eeo_summary() to authenticated;
 
 -- Example RLS policies (adjust role checks to match your auth strategy)
 alter table public.posts enable row level security;
@@ -419,6 +446,7 @@ grant insert on public.job_applications to anon;
 grant execute on function public.submit_job_application(jsonb) to anon, authenticated;
 grant execute on function public.submit_job_application_eeo(jsonb) to anon, authenticated;
 grant execute on function public.delete_job_application_eeo_draft(uuid, uuid) to anon, authenticated;
+grant execute on function public.get_job_eeo_summary() to authenticated;
 grant select, insert, update, delete on public.posts to authenticated;
 grant select, insert, update, delete on public.jobs to authenticated;
 grant select, update on public.job_applications to authenticated;
