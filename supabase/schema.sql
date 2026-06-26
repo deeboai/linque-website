@@ -361,6 +361,8 @@ for each row execute function private.queue_job_application_notification();
 
 -- Returns de-identified EEO aggregate counts per job for the admin dashboard.
 -- Security definer so authenticated callers can read counts without direct table access.
+-- language sql avoids PL/pgSQL variable-scoping ambiguity between the job_id return
+-- column and the inner correlated subquery references.
 create or replace function public.get_job_eeo_summary()
 returns table (
   job_id uuid,
@@ -372,61 +374,59 @@ returns table (
   veteran_status_counts jsonb,
   disability_status_counts jsonb
 )
-language plpgsql
+language sql
 security definer
+stable
 set search_path = public
 as $$
-begin
-  return query
   select
-    base.job_id,
-    j.title as job_title,
-    j.slug  as job_slug,
+    base.jid,
+    j.title,
+    j.slug,
     base.total_responses,
     (
       select jsonb_object_agg(rc.race_ethnicity, rc.cnt)
       from (
         select race_ethnicity, count(*)::bigint as cnt
         from public.job_application_eeo r
-        where r.job_id = base.job_id
+        where r.job_id = base.jid
         group by race_ethnicity
       ) rc
-    ) as race_ethnicity_counts,
+    ),
     (
       select jsonb_object_agg(gc.gender, gc.cnt)
       from (
         select gender, count(*)::bigint as cnt
         from public.job_application_eeo g
-        where g.job_id = base.job_id
+        where g.job_id = base.jid
         group by gender
       ) gc
-    ) as gender_counts,
+    ),
     (
       select jsonb_object_agg(vc.veteran_status, vc.cnt)
       from (
         select veteran_status, count(*)::bigint as cnt
         from public.job_application_eeo v
-        where v.job_id = base.job_id
+        where v.job_id = base.jid
         group by veteran_status
       ) vc
-    ) as veteran_status_counts,
+    ),
     (
       select jsonb_object_agg(dc.disability_status, dc.cnt)
       from (
         select disability_status, count(*)::bigint as cnt
         from public.job_application_eeo d
-        where d.job_id = base.job_id
+        where d.job_id = base.jid
         group by disability_status
       ) dc
-    ) as disability_status_counts
+    )
   from (
-    select job_id, count(*)::bigint as total_responses
+    select job_id as jid, count(*)::bigint as total_responses
     from public.job_application_eeo
     group by job_id
   ) base
-  join public.jobs j on j.id = base.job_id
+  join public.jobs j on j.id = base.jid
   order by base.total_responses desc;
-end;
 $$;
 
 -- Only authenticated admins can call this; security definer bypasses RLS on job_application_eeo.
