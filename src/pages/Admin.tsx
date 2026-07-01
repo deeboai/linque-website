@@ -37,6 +37,16 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Loader2, Plus, Pencil, Trash, LogOut, ImagePlus } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import Seo from "@/components/Seo";
 import { buildCanonicalUrl } from "@/lib/seo";
 
@@ -965,6 +975,7 @@ interface JobDialogProps {
 
 const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogProps) => {
   const [showPreview, setShowPreview] = useState(false);
+  const [pendingValues, setPendingValues] = useState<JobFormValues | null>(null);
   const { register, handleSubmit, watch, setValue, reset } = useForm<JobFormValues>({
     defaultValues: mapJobToFormValues(job),
     values: mapJobToFormValues(job),
@@ -979,48 +990,51 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
     }
   }, [open, job, reset]);
 
+  const buildPayload = (values: JobFormValues) => ({
+    id: values.id,
+    title: values.title,
+    slug: values.slug || slugify(values.title),
+    location: values.location,
+    employmentType: values.employmentType,
+    department: values.department,
+    remoteType: values.remoteType,
+    summary: values.summary,
+    description: values.description,
+    responsibilities: values.responsibilities
+      ? values.responsibilities.split("\n").map((item) => item.trim()).filter(Boolean)
+      : [],
+    qualifications: values.qualifications
+      ? values.qualifications.split("\n").map((item) => item.trim()).filter(Boolean)
+      : [],
+    salaryRange: values.salaryRange || null,
+    applyEmail: values.applyEmail || null,
+    applyUrl: values.applyUrl || null,
+    applicationsEnabled: values.applicationsEnabled,
+    screeningQuestionKeys: values.screeningQuestionKeys,
+    requiredScreeningQuestionKeys: values.requiredScreeningQuestionKeys.filter((key) =>
+      values.screeningQuestionKeys.includes(key),
+    ),
+    applicationPlaceholders: values.applicationPlaceholders,
+    status: values.status,
+    postedAt: toIsoIfValue(values.postedAt),
+  });
+
   const submit = (values: JobFormValues) => {
-    const isPublished = values.status === "published";
-    const isEditing = !!values.id;
-
-    if (isEditing && isPublished) {
-      if (!window.confirm("You're saving changes to a live, published job listing. This will update it immediately on the public site. Continue?")) return;
-    } else if (!isEditing && isPublished) {
-      if (!window.confirm("This job will be published immediately and visible to all visitors. Continue?")) return;
+    if (values.status === "published") {
+      setPendingValues(values);
+      return;
     }
+    onSubmit(buildPayload(values));
+  };
 
-    const payload = {
-      id: values.id,
-      title: values.title,
-      slug: values.slug || slugify(values.title),
-      location: values.location,
-      employmentType: values.employmentType,
-      department: values.department,
-      remoteType: values.remoteType,
-      summary: values.summary,
-      description: values.description,
-      responsibilities: values.responsibilities
-        ? values.responsibilities.split("\n").map((item) => item.trim()).filter(Boolean)
-        : [],
-      qualifications: values.qualifications
-        ? values.qualifications.split("\n").map((item) => item.trim()).filter(Boolean)
-        : [],
-      salaryRange: values.salaryRange || null,
-      applyEmail: values.applyEmail || null,
-      applyUrl: values.applyUrl || null,
-      applicationsEnabled: values.applicationsEnabled,
-      screeningQuestionKeys: values.screeningQuestionKeys,
-      requiredScreeningQuestionKeys: values.requiredScreeningQuestionKeys.filter((key) =>
-        values.screeningQuestionKeys.includes(key),
-      ),
-      applicationPlaceholders: values.applicationPlaceholders,
-      status: values.status,
-      postedAt: toIsoIfValue(values.postedAt),
-    };
-    onSubmit(payload);
+  const confirmPublish = () => {
+    if (!pendingValues) return;
+    onSubmit(buildPayload(pendingValues));
+    setPendingValues(null);
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
@@ -1031,9 +1045,9 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
                 Published jobs appear instantly on the careers page. Drafts remain private until published.
               </DialogDescription>
             </div>
-            <Button 
-              type="button" 
-              variant="outline" 
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => setShowPreview(!showPreview)}
               className="shrink-0"
             >
@@ -1395,6 +1409,25 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
         )}
       </DialogContent>
     </Dialog>
+    <AlertDialog open={pendingValues !== null} onOpenChange={(next) => !next && setPendingValues(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {pendingValues?.id ? "Update the live job listing?" : "Publish this job now?"}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {pendingValues?.id
+              ? "You're saving changes to a live, published job listing. This will update it immediately on the public site."
+              : "This job will be published immediately and visible to all visitors."}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={confirmPublish}>Continue</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 };
 
