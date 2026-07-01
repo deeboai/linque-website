@@ -271,6 +271,25 @@ begin
 end;
 $$;
 
+create or replace function public.delete_job_application(application_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- The EEO response has no foreign key to job_applications (by design, so the two writes stay
+  -- decoupled), so it must be deleted explicitly alongside the application row.
+  delete from public.job_application_eeo
+  where job_application_eeo.application_id = delete_job_application.application_id;
+
+  delete from public.job_applications
+  where job_applications.id = delete_job_application.application_id;
+end;
+$$;
+
+grant execute on function public.delete_job_application(uuid) to authenticated;
+
 -- Update timestamp triggers
 create or replace function public.handle_updated_at()
 returns trigger as $$
@@ -563,3 +582,10 @@ create policy "Authenticated users download resumes"
     bucket_id = 'job-applications'
     and storage.allow_any_operation(array['object.get_authenticated', 'object.get_authenticated_info'])
   );
+
+drop policy if exists "Authenticated users delete resumes" on storage.objects;
+create policy "Authenticated users delete resumes"
+  on storage.objects
+  for delete
+  to authenticated
+  using (bucket_id = 'job-applications');
