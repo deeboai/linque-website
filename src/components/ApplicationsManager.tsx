@@ -175,10 +175,14 @@ export const ApplicationsManager = () => {
       await deleteJobApplication(application.id);
     },
     onSuccess: async () => {
+      // The delete already succeeded at this point — a refetch hiccup here must not surface as a
+      // delete failure, so invalidation errors are swallowed rather than left to bubble into onError.
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: jobApplicationsQueryKey() }),
         queryClient.invalidateQueries({ queryKey: eeoSummaryQueryKey() }),
-      ]);
+      ]).catch((error) => {
+        console.error(error);
+      });
       toast({ title: "Application deleted" });
       setPendingDelete(null);
       setSelectedApplication(null);
