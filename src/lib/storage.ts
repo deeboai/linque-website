@@ -114,3 +114,14 @@ export const downloadApplicationResume = async (bucket: string, path: string) =>
 
   return data;
 };
+
+export const deleteApplicationResume = async (bucket: string, path: string) => {
+  if (!supabase) {
+    throw new Error("Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.");
+  }
+
+  const { error } = await supabase.storage.from(bucket).remove([path]);
+  if (error) {
+    throw error;
+  }
+};

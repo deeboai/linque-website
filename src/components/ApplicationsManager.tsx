@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Briefcase, ChevronDown, ChevronUp, Download, Loader2, Mail, Phone, PencilLine } from "lucide-react";
+import { Briefcase, ChevronDown, ChevronUp, Download, Loader2, Mail, Phone, PencilLine, Trash2 } from "lucide-react";
 
-import { useEeoSummary, useJobApplications, jobApplicationsQueryKey } from "@/hooks/useContent";
-import { downloadApplicationResume } from "@/lib/storage";
-import { updateJobApplication, type CMSJobApplication, type JobEeoSummary } from "@/lib/content";
+import { eeoSummaryQueryKey, useEeoSummary, useJobApplications, jobApplicationsQueryKey } from "@/hooks/useContent";
+import { deleteApplicationResume, downloadApplicationResume } from "@/lib/storage";
+import { deleteJobApplication, updateJobApplication, type CMSJobApplication, type JobEeoSummary } from "@/lib/content";
 import {
   eeoDisabilityStatusOptions,
   eeoGenderOptions,
@@ -16,6 +16,16 @@ import {
   type JobApplicationStatus,
 } from "@/lib/jobApplications";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -93,6 +103,7 @@ export const ApplicationsManager = () => {
   );
   const [adminNotes, setAdminNotes] = useState(emptySelection.adminNotes);
   const [isDownloadingResume, setIsDownloadingResume] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<CMSJobApplication | null>(null);
 
   const jobGroups = useMemo<JobGroup[]>(() => {
     const map = new Map<string, JobGroup>();
@@ -145,6 +156,37 @@ export const ApplicationsManager = () => {
       console.error(error);
       toast({
         title: "Unable to update application",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (application: CMSJobApplication) => {
+      if (!application.id) {
+        throw new Error("Missing application identifier.");
+      }
+      // Best-effort resume cleanup: an already-missing file shouldn't block deleting the record.
+      await deleteApplicationResume(application.resumeBucket, application.resumePath).catch((error) => {
+        console.error(error);
+      });
+      // Removes the job_applications row and its EEO response together (see delete_job_application RPC).
+      await deleteJobApplication(application.id);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: jobApplicationsQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: eeoSummaryQueryKey() }),
+      ]);
+      toast({ title: "Application deleted" });
+      setPendingDelete(null);
+      setSelectedApplication(null);
+    },
+    onError: (error) => {
+      console.error(error);
+      toast({
+        title: "Unable to delete application",
         description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       });
@@ -290,9 +332,14 @@ export const ApplicationsManager = () => {
                             </span>
                           </div>
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => openApplication(application)}>
-                          <PencilLine className="mr-2 h-3.5 w-3.5" /> Review
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => openApplication(application)}>
+                            <PencilLine className="mr-2 h-3.5 w-3.5" /> Review
+                          </Button>
+                          <Button variant="destructive" size="sm" onClick={() => setPendingDelete(application)}>
+                            <Trash2 className="mr-2 h-3.5 w-3.5" /> Delete
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -452,19 +499,28 @@ export const ApplicationsManager = () => {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3">
-                  <Button variant="outline" onClick={() => closeDialog(false)}>
-                    Close
+                <div className="flex justify-between gap-3">
+                  <Button
+                    variant="destructive"
+                    onClick={() => setPendingDelete(selectedApplication)}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete application
                   </Button>
-                  <Button onClick={handleSave} disabled={mutation.isPending}>
-                    {mutation.isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> Saving…
-                      </>
-                    ) : (
-                      "Save review"
-                    )}
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button variant="outline" onClick={() => closeDialog(false)}>
+                      Close
+                    </Button>
+                    <Button onClick={handleSave} disabled={mutation.isPending}>
+                      {mutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> Saving…
+                        </>
+                      ) : (
+                        "Save review"
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </>
@@ -532,6 +588,37 @@ export const ApplicationsManager = () => {
           </div>
         </>
       )}
+
+      <AlertDialog open={pendingDelete !== null} onOpenChange={(next) => !next && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this application?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes {pendingDelete?.fullName}&apos;s application for {pendingDelete?.jobTitle},
+              their EEO response, and their uploaded resume. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                if (pendingDelete) deleteMutation.mutate(pendingDelete);
+              }}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> Deleting…
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

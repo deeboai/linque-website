@@ -588,6 +588,14 @@ export const updateJobApplication = async (
   if (error) throw error;
 };
 
+export const deleteJobApplication = async (id: string) => {
+  ensureSupabase();
+  // The application and its EEO response have no foreign key linking them (by design), so both
+  // rows are removed together server-side via this RPC rather than two separate client calls.
+  const { error } = await supabase!.rpc("delete_job_application", { application_id: id });
+  if (error) throw error;
+};
+
 // De-identified EEO aggregate counts returned by the get_job_eeo_summary() RPC.
 // No individual applicant data is exposed — only per-value counts per dimension.
 export interface JobEeoSummary {
