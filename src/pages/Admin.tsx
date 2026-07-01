@@ -14,7 +14,7 @@ import {
   type PublishStatus,
   type CMSPostSection,
 } from "@/lib/content";
-import { usePosts, useJobs, postsQueryKey, jobsQueryKey } from "@/hooks/useContent";
+import { usePosts, useJobs, postsQueryKey, jobsQueryKey, jobApplicationsQueryKey } from "@/hooks/useContent";
 import {
   defaultJobApplicationSettings,
   screeningQuestionDefinitions,
@@ -180,6 +180,7 @@ const mapJobToFormValues = (job?: CMSJob): JobFormValues => ({
 const Admin = () => {
   const canonicalUrl = useMemo(() => buildCanonicalUrl("/admin"), []);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
 
@@ -318,7 +319,14 @@ const Admin = () => {
           <LogOut className="mr-2 h-4 w-4" /> Sign out
         </Button>
       </AnimatedSection>
-      <Tabs defaultValue="posts">
+      <Tabs
+        defaultValue="posts"
+        onValueChange={(value) => {
+          if (value === "applications") {
+            queryClient.invalidateQueries({ queryKey: jobApplicationsQueryKey() });
+          }
+        }}
+      >
         <TabsList className="mb-6">
           <TabsTrigger value="posts">Posts</TabsTrigger>
           <TabsTrigger value="jobs">Jobs</TabsTrigger>

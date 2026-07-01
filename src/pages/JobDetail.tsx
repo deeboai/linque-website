@@ -28,7 +28,7 @@ const JobDetail = () => {
   }
 
   const canonicalUrl = buildCanonicalUrl(`/jobs/${job.slug}`);
-  const applyHref = job.applyUrl ?? `mailto:${job.applyEmail ?? "careers@linqueresourcing.com"}`;
+  const applyHref = job.applyUrl ?? `mailto:${job.applyEmail ?? "info@linqueresourcing.com"}`;
   const hasInternalApplications = job.applicationsEnabled;
 
   return (
@@ -151,7 +151,7 @@ const JobDetail = () => {
             <Card className="border border-muted/40 bg-muted/40 p-8 text-center text-sm text-muted-foreground">
               <p>
                 Linque Resourcing is an equal opportunity employer. If you require accommodations during the hiring
-                process, email <a href="mailto:careers@linqueresourcing.com" className="text-primary underline">careers@linqueresourcing.com</a>.
+                process, email <a href="mailto:info@linqueresourcing.com" className="text-primary underline">info@linqueresourcing.com</a>.
               </p>
             </Card>
           </AnimatedSection>

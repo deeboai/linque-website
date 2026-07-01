@@ -42,7 +42,7 @@ export const jobPostings: JobPosting[] = [
       "PHR/SPHR, SHRM-SCP, or similar certification preferred.",
     ],
     salaryRange: "$135,000 - $155,000 base + bonus",
-    applyEmail: "careers@linqueresourcing.com",
+    applyEmail: "info@linqueresourcing.com",
     postedAt: "2024-02-26T08:00:00.000Z",
   },
   {
