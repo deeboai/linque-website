@@ -281,7 +281,7 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
       setWasSubmitted(true);
       toast({
         title: "Application submitted",
-        description: "Your application and separate EEO form have been submitted.",
+        description: "Your application has been submitted",
       });
     } catch (error) {
       console.error(error);
@@ -331,8 +331,7 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
       <div className="space-y-2">
         <h2 className="text-2xl font-semibold text-foreground">Apply for this role</h2>
         <p className="text-sm text-muted-foreground">
-          Submit your application directly through Linque Resourcing&apos;s careers workflow. Required fields are
-          validated before submission, and any that are missing or invalid will be highlighted in red.
+          Submit your application here. Required fields are marked with an asterisk
         </p>
       </div>
 
@@ -346,7 +345,9 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
       <form onSubmit={handleSubmit(onSubmit, onInvalid)} className="space-y-8" noValidate>
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="application-full-name">Full name</Label>
+            <Label htmlFor="application-full-name">
+              Full name<span className="ml-1 text-red-600">*</span>
+            </Label>
             <Input
               id="application-full-name"
               aria-invalid={Boolean(errors.fullName)}
@@ -355,7 +356,9 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
             <FieldError message={errors.fullName?.message} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="application-email">Email address</Label>
+            <Label htmlFor="application-email">
+              Email address<span className="ml-1 text-red-600">*</span>
+            </Label>
             <Input
               id="application-email"
               type="email"
@@ -365,7 +368,9 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
             <FieldError message={errors.email?.message} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="application-phone">Phone number</Label>
+            <Label htmlFor="application-phone">
+              Phone number<span className="ml-1 text-red-600">*</span>
+            </Label>
             <Input
               id="application-phone"
               type="tel"
@@ -375,7 +380,9 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
             <FieldError message={errors.phone?.message} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="application-desired-pay">Desired pay</Label>
+            <Label htmlFor="application-desired-pay">
+              Desired pay<span className="ml-1 text-red-600">*</span>
+            </Label>
             <Input
               id="application-desired-pay"
               aria-invalid={Boolean(errors.desiredPay)}
@@ -386,7 +393,9 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="application-address">Address</Label>
+          <Label htmlFor="application-address">
+            Address<span className="ml-1 text-red-600">*</span>
+          </Label>
           <Textarea
             id="application-address"
             rows={2}
@@ -398,7 +407,9 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
 
         <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
-            <Label>Work authorization</Label>
+            <Label>
+              Work authorization<span className="ml-1 text-red-600">*</span>
+            </Label>
             <Select
               value={watch("workAuthorization")}
               onValueChange={(value) => setValue("workAuthorization", value, { shouldValidate: true })}
@@ -414,7 +425,9 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
             <FieldError message={errors.workAuthorization?.message} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="application-start-date">Available start date</Label>
+            <Label htmlFor="application-start-date">
+              Available start date<span className="ml-1 text-red-600">*</span>
+            </Label>
             <Input
               id="application-start-date"
               type="date"
@@ -424,7 +437,9 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
             <FieldError message={errors.availableStartDate?.message} />
           </div>
           <div className="space-y-2">
-            <Label>Highest education obtained</Label>
+            <Label>
+              Highest education obtained<span className="ml-1 text-red-600">*</span>
+            </Label>
             <Select
               value={watch("highestEducation")}
               onValueChange={(value) => setValue("highestEducation", value, { shouldValidate: true })}
@@ -445,7 +460,9 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="application-interest">Why are you interested in this role?</Label>
+          <Label htmlFor="application-interest">
+            Why are you interested in this role?<span className="ml-1 text-red-600">*</span>
+          </Label>
           <Textarea
             id="application-interest"
             rows={4}
@@ -457,7 +474,9 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
 
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Label>Background screening</Label>
+            <Label>
+              Background screening<span className="ml-1 text-red-600">*</span>
+            </Label>
             <Select
               value={watch("backgroundCheckConsent")}
               onValueChange={(value) => setValue("backgroundCheckConsent", value, { shouldValidate: true })}
@@ -609,7 +628,9 @@ export const JobApplicationForm = ({ job }: JobApplicationFormProps) => {
           <div className="flex items-start gap-3">
             <UploadCloud className="mt-1 h-5 w-5 text-muted-foreground" aria-hidden="true" />
             <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-foreground">Resume upload</h3>
+              <h3 className="text-sm font-semibold text-foreground">
+                Resume upload<span className="ml-1 text-red-600">*</span>
+              </h3>
               <p className="text-sm text-muted-foreground">
                 Upload one resume in PDF, DOC, or DOCX format. Files must be smaller than 5 MB.
               </p>

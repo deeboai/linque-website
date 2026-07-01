@@ -173,7 +173,7 @@ const Jobs = () => {
                         </Button>
                       ) : (
                         <Button asChild>
-                          <a href={job.applyUrl ?? `mailto:${job.applyEmail ?? "careers@linqueresourcing.com"}`}>
+                          <a href={job.applyUrl ?? `mailto:${job.applyEmail ?? "info@linqueresourcing.com"}`}>
                             Apply
                           </a>
                         </Button>
@@ -187,7 +187,7 @@ const Jobs = () => {
             {filteredJobs.length === 0 && !isLoading && (
               <AnimatedSection animation="fade-in-up">
                 <Card className="border-none bg-muted/40 p-10 text-center text-muted-foreground">
-                  <p>No roles match your filters right now. Check back soon or connect via careers@linqueresourcing.com.</p>
+                  <p>No roles match your filters right now. Check back soon or connect via info@linqueresourcing.com.</p>
                 </Card>
               </AnimatedSection>
             )}
