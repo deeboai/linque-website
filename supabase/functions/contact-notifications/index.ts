@@ -4,13 +4,121 @@ interface ContactPayload {
   company?: string;
   subject?: string;
   message?: string;
+  /** Honeypot. Hidden from humans, so any value means a bot filled the form. */
+  website?: string;
 }
+
+/** A submission that passed validation — every real field present, honeypot dropped. */
+type ContactData = Required<Omit<ContactPayload, "website">>;
 
 const resendApiKey = Deno.env.get("RESEND_API_KEY");
 const resendFromEmail = Deno.env.get("RESEND_FROM_EMAIL");
 const internalEmail = "Info@linqueresourcing.com";
 
 const jsonHeaders = { "Content-Type": "application/json" };
+
+/**
+ * Origins allowed to read this function's responses. Override with a
+ * comma-separated ALLOWED_ORIGINS secret to add preview or staging domains.
+ * Note this only constrains browsers — it does not stop direct requests.
+ */
+const allowedOrigins = (
+  Deno.env.get("ALLOWED_ORIGINS") ??
+  "https://linqueresourcing.com,https://www.linqueresourcing.com,http://localhost:5173,http://localhost:8080"
+)
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const corsHeaders = (origin: string | null) => {
+  const headers: Record<string, string> = {
+    Vary: "Origin",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
+  if (origin && allowedOrigins.includes(origin)) {
+    headers["Access-Control-Allow-Origin"] = origin;
+  }
+  return headers;
+};
+
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000;
+const RATE_LIMIT_MAX = 3;
+
+/**
+ * Per-instance sliding window keyed on client IP. Edge functions run as
+ * several isolates, so this caps the rate each one will accept rather than
+ * enforcing a single global number.
+ */
+const recentSubmissions = new Map<string, number[]>();
+
+const clientIp = (request: Request) =>
+  request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+  request.headers.get("cf-connecting-ip") ||
+  "unknown";
+
+const isRateLimited = (ip: string) => {
+  const now = Date.now();
+  const cutoff = now - RATE_LIMIT_WINDOW_MS;
+
+  for (const [key, stamps] of recentSubmissions) {
+    const live = stamps.filter((stamp) => stamp > cutoff);
+    if (live.length === 0) recentSubmissions.delete(key);
+    else recentSubmissions.set(key, live);
+  }
+
+  const stamps = recentSubmissions.get(ip) ?? [];
+  if (stamps.length >= RATE_LIMIT_MAX) return true;
+
+  recentSubmissions.set(ip, [...stamps, now]);
+  return false;
+};
+
+const VOWELS = new Set(["a", "e", "i", "o", "u", "y"]);
+
+/**
+ * Scores how much a field looks machine-generated. The spam we see fills
+ * fields with tokens like "AHsOHlgAvlbkziuLbkFxYaI" — pronounceable-looking
+ * but with case flips and consonant runs no real name or subject has.
+ */
+const gibberishScore = (value: string) => {
+  let score = 0;
+
+  if (/https?:\/\/|www\.|<a\s|\[url/i.test(value)) score += 3;
+
+  for (const word of value.split(/\s+/).filter((w) => w.length >= 8)) {
+    const letters = word.replace(/[^A-Za-z]/g, "");
+    if (letters.length < 8) continue;
+
+    let caseFlips = 0;
+    let consonantRun = 0;
+    let longestConsonantRun = 0;
+    let vowelCount = 0;
+
+    for (let i = 0; i < letters.length; i += 1) {
+      const char = letters[i];
+      const lower = char.toLowerCase();
+
+      if (i > 0 && letters[i - 1] === letters[i - 1].toLowerCase() && char === char.toUpperCase()) {
+        caseFlips += 1;
+      }
+
+      if (VOWELS.has(lower)) {
+        vowelCount += 1;
+        consonantRun = 0;
+      } else {
+        consonantRun += 1;
+        longestConsonantRun = Math.max(longestConsonantRun, consonantRun);
+      }
+    }
+
+    if (caseFlips >= 3) score += 1;
+    if (longestConsonantRun >= 5) score += 1;
+    if (vowelCount / letters.length < 0.25) score += 1;
+  }
+
+  return score;
+};
 
 const escapeHtml = (value: string) =>
   value
@@ -45,7 +153,7 @@ const sendEmail = async (payload: Record<string, unknown>) => {
   return (body as { id: string }).id;
 };
 
-const buildInternalEmail = (data: Required<ContactPayload>) => {
+const buildInternalEmail = (data: ContactData) => {
   const text = [
     `New contact form submission from ${data.name} at ${data.company}.`,
     "",
@@ -78,7 +186,7 @@ const buildInternalEmail = (data: Required<ContactPayload>) => {
   return { text, html };
 };
 
-const buildConfirmationEmail = (data: Required<ContactPayload>) => {
+const buildConfirmationEmail = (data: ContactData) => {
   const text = [
     `Dear ${data.name},`,
     "",
@@ -107,19 +215,15 @@ const buildConfirmationEmail = (data: Required<ContactPayload>) => {
 };
 
 Deno.serve(async (request) => {
+  const cors = corsHeaders(request.headers.get("origin"));
+  const responseHeaders = { ...jsonHeaders, ...cors };
+
   if (request.method === "OPTIONS") {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
-      },
-    });
+    return new Response(null, { status: 204, headers: cors });
   }
 
   if (request.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed." }), { status: 405, headers: jsonHeaders });
+    return new Response(JSON.stringify({ error: "Method not allowed." }), { status: 405, headers: responseHeaders });
   }
 
   try {
@@ -130,12 +234,32 @@ Deno.serve(async (request) => {
     const company = raw.company?.trim() ?? "";
     const subject = raw.subject?.trim() ?? "";
     const message = raw.message?.trim() ?? "";
+    const honeypot = raw.website?.trim() ?? "";
+
+    // Report success to suspected bots so they don't retry or adapt, but send
+    // nothing. Anything that reaches a `return` here costs zero outbound email.
+    const silentlyDiscard = (reason: string) => {
+      console.warn(`[contact-notifications] discarded submission (${reason})`, { name, email, subject });
+      return new Response(JSON.stringify({ ok: true }), { status: 200, headers: responseHeaders });
+    };
+
+    if (honeypot) return silentlyDiscard("honeypot");
 
     if (!name || !email || !company || !subject || !message) {
-      return new Response(JSON.stringify({ error: "All fields are required." }), { status: 400, headers: jsonHeaders });
+      return new Response(JSON.stringify({ error: "All fields are required." }), { status: 400, headers: responseHeaders });
     }
 
-    const data: Required<ContactPayload> = { name, email, company, subject, message };
+    const spamScore = gibberishScore(name) + gibberishScore(company) + gibberishScore(subject);
+    if (spamScore >= 3) return silentlyDiscard(`content heuristics, score ${spamScore}`);
+
+    if (isRateLimited(clientIp(request))) {
+      return new Response(
+        JSON.stringify({ error: "Too many messages from this network. Please try again later or email info@linqueresourcing.com." }),
+        { status: 429, headers: responseHeaders },
+      );
+    }
+
+    const data: ContactData = { name, email, company, subject, message };
     const internal = buildInternalEmail(data);
     const confirmation = buildConfirmationEmail(data);
 
@@ -167,19 +291,19 @@ Deno.serve(async (request) => {
     if (errors.length === 2) {
       return new Response(JSON.stringify({ error: errors.join(" | ") }), {
         status: 500,
-        headers: { ...jsonHeaders, "Access-Control-Allow-Origin": "*" },
+        headers: responseHeaders,
       });
     }
 
     return new Response(JSON.stringify({ ok: true }), {
       status: 200,
-      headers: { ...jsonHeaders, "Access-Control-Allow-Origin": "*" },
+      headers: responseHeaders,
     });
   } catch (error) {
     console.error("[contact-notifications]", error);
     return new Response(
       JSON.stringify({ error: error instanceof Error ? error.message : "Unexpected error." }),
-      { status: 500, headers: { ...jsonHeaders, "Access-Control-Allow-Origin": "*" } },
+      { status: 500, headers: responseHeaders },
     );
   }
 });

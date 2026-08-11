@@ -18,6 +18,8 @@ const contactSchema = z.object({
   company: z.string().min(2, "Tell us which company or organization you represent."),
   subject: z.string().min(3, "Add a subject to give our team quick context."),
   message: z.string().min(3, "Let us know how we can help or what outcome you are targeting."),
+  // Honeypot. Hidden from real users, so anything here means an automated fill.
+  website: z.string().max(0).optional(),
 });
 
 type ContactFormValues = z.infer<typeof contactSchema>;
@@ -34,6 +36,7 @@ const Contact = () => {
       company: "",
       subject: "",
       message: "",
+      website: "",
     },
   });
 
@@ -261,6 +264,23 @@ const Contact = () => {
                     "Send message"
                   )}
                 </Button>
+
+                {/*
+                  Honeypot: positioned off-screen rather than display:none, since
+                  some bots skip hidden inputs but not offset ones. Never focusable
+                  or announced, so real users can't fill it by accident. Kept last
+                  so the form's space-y-6 rhythm is unaffected.
+                */}
+                <div className="absolute left-[-9999px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
+                  <label htmlFor="website">Leave this field empty</label>
+                  <input
+                    id="website"
+                    type="text"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    {...form.register("website")}
+                  />
+                </div>
               </form>
             </AnimatedSection>
 
