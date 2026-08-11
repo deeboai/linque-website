@@ -299,6 +299,17 @@ To enable this in a real environment, set these Edge Function secrets in Supabas
 - `JOB_APPLICATION_WEBHOOK_SECRET` – shared secret used by the database trigger and the Edge Function
 - `APPLICATION_DEFAULT_NOTIFICATION_EMAIL` – fallback internal inbox when a job record does not define `apply_email`
 - `APPLICATION_ADMIN_URL` – optional override for the admin dashboard URL; defaults to `https://linqueresourcing.com/admin`
+- `ALLOWED_ORIGINS` – optional comma-separated CORS allowlist for `contact-notifications`. Defaults to the production domain, its `www` variant, and localhost dev ports. Add preview or staging domains here rather than editing the function.
+
+### Contact form spam controls
+
+`contact-notifications` drops suspected automated submissions before sending any email. Three layers run in order:
+
+1. **Honeypot** – a hidden `website` field. Any value means a bot filled the form.
+2. **Content heuristics** – scores `name`, `company`, and `subject` for machine-generated text (case flips, consonant runs, low vowel ratio, embedded URLs). Blocks at a combined score of 3.
+3. **Rate limit** – 3 submissions per IP per hour, tracked in memory per function instance.
+
+Layers 1 and 2 return `200 {ok:true}` without sending mail, so bots see success and don't adapt. Discards are logged with `console.warn` — check the function logs before assuming a real message went missing.
 
 The database trigger also expects these keys in the private `application_integration_settings` table:
 
