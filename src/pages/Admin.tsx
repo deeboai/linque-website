@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { type Session } from "@supabase/supabase-js";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase, isSupabaseConfigured } from "@/lib/supabaseClient";
 import { uploadPostHeroImage, isHeroImageUploadEnabled } from "@/lib/storage";
@@ -28,6 +28,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import RichTextEditor from "@/components/RichTextEditor";
+import RichTextContent from "@/components/RichTextContent";
+import { isRichTextEmpty } from "@/lib/richText";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -77,6 +80,7 @@ type JobFormValues = {
   employmentType: string;
   department: string;
   remoteType: string;
+  // Body fields hold sanitized HTML from the rich text editor, not plain text.
   summary: string;
   description: string;
   responsibilities: string;
@@ -172,10 +176,10 @@ const mapJobToFormValues = (job?: CMSJob): JobFormValues => ({
   employmentType: job?.employmentType ?? "",
   department: job?.department ?? "",
   remoteType: job?.remoteType ?? "",
-  summary: job?.summary ?? "",
-  description: job?.description ?? "",
-  responsibilities: (job?.responsibilities ?? []).join("\n"),
-  qualifications: (job?.qualifications ?? []).join("\n"),
+  summary: job?.summaryHtml ?? "",
+  description: job?.descriptionHtml ?? "",
+  responsibilities: job?.responsibilitiesHtml ?? "",
+  qualifications: job?.qualificationsHtml ?? "",
   salaryRange: job?.salaryRange ?? "",
   applyEmail: job?.applyEmail ?? "",
   applyUrl: job?.applyUrl ?? "",
@@ -976,7 +980,7 @@ interface JobDialogProps {
 const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogProps) => {
   const [showPreview, setShowPreview] = useState(false);
   const [pendingValues, setPendingValues] = useState<JobFormValues | null>(null);
-  const { register, handleSubmit, watch, setValue, reset } = useForm<JobFormValues>({
+  const { register, handleSubmit, watch, setValue, reset, control } = useForm<JobFormValues>({
     defaultValues: mapJobToFormValues(job),
     values: mapJobToFormValues(job),
   });
@@ -998,14 +1002,11 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
     employmentType: values.employmentType,
     department: values.department,
     remoteType: values.remoteType,
-    summary: values.summary,
-    description: values.description,
-    responsibilities: values.responsibilities
-      ? values.responsibilities.split("\n").map((item) => item.trim()).filter(Boolean)
-      : [],
-    qualifications: values.qualifications
-      ? values.qualifications.split("\n").map((item) => item.trim()).filter(Boolean)
-      : [],
+    // Plain-text projections are derived inside upsertJob so they cannot drift.
+    summaryHtml: values.summary,
+    descriptionHtml: values.description,
+    responsibilitiesHtml: values.responsibilities,
+    qualificationsHtml: values.qualifications,
     salaryRange: values.salaryRange || null,
     applyEmail: values.applyEmail || null,
     applyUrl: values.applyUrl || null,
@@ -1077,32 +1078,31 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
               </div>
               
               <div className="space-y-6">
-                {formValues.description && (
+                {!isRichTextEmpty(formValues.summary) && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-2">Summary</h3>
+                    <RichTextContent html={formValues.summary} className="prose-sm text-gray-700" />
+                  </div>
+                )}
+
+                {!isRichTextEmpty(formValues.description) && (
                   <div>
                     <h3 className="text-lg font-semibold mb-2">Job Description</h3>
-                    <div className="whitespace-pre-wrap text-gray-700">{formValues.description}</div>
+                    <RichTextContent html={formValues.description} className="prose-sm text-gray-700" />
                   </div>
                 )}
-                
-                {formValues.responsibilities && (
+
+                {!isRichTextEmpty(formValues.responsibilities) && (
                   <div>
                     <h3 className="text-lg font-semibold mb-2">Responsibilities</h3>
-                    <ul className="list-disc list-inside space-y-1">
-                      {formValues.responsibilities.split('\n').filter(resp => resp.trim()).map((resp, index) => (
-                        <li key={index} className="text-gray-700">{resp.trim()}</li>
-                      ))}
-                    </ul>
+                    <RichTextContent html={formValues.responsibilities} className="prose-sm text-gray-700" />
                   </div>
                 )}
-                
-                {formValues.qualifications && (
+
+                {!isRichTextEmpty(formValues.qualifications) && (
                   <div>
                     <h3 className="text-lg font-semibold mb-2">Qualifications</h3>
-                    <ul className="list-disc list-inside space-y-1">
-                      {formValues.qualifications.split('\n').filter(qual => qual.trim()).map((qual, index) => (
-                        <li key={index} className="text-gray-700">{qual.trim()}</li>
-                      ))}
-                    </ul>
+                    <RichTextContent html={formValues.qualifications} className="prose-sm text-gray-700" />
                   </div>
                 )}
                 
@@ -1372,22 +1372,73 @@ const JobDialog = ({ open, onOpenChange, job, submitting, onSubmit }: JobDialogP
 
           <div className="space-y-2">
             <Label htmlFor="job-summary">Summary</Label>
-            <Textarea id="job-summary" rows={2} {...register("summary")} />
+            <p className="text-sm text-gray-600">
+              A short intro shown at the top of the posting and on the jobs listing page.
+            </p>
+            <Controller
+              control={control}
+              name="summary"
+              render={({ field }) => (
+                <RichTextEditor
+                  id="job-summary"
+                  ariaLabel="Summary"
+                  value={field.value}
+                  onChange={field.onChange}
+                  minHeight="5rem"
+                />
+              )}
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="job-description">Description</Label>
-            <Textarea id="job-description" rows={3} {...register("description")} />
+            <Controller
+              control={control}
+              name="description"
+              render={({ field }) => (
+                <RichTextEditor
+                  id="job-description"
+                  ariaLabel="Description"
+                  value={field.value}
+                  onChange={field.onChange}
+                  minHeight="8rem"
+                />
+              )}
+            />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="job-responsibilities">Responsibilities (one per line)</Label>
-              <Textarea id="job-responsibilities" rows={4} {...register("responsibilities")} />
+              <Label htmlFor="job-responsibilities">Responsibilities</Label>
+              <Controller
+                control={control}
+                name="responsibilities"
+                render={({ field }) => (
+                  <RichTextEditor
+                    id="job-responsibilities"
+                    ariaLabel="Responsibilities"
+                    value={field.value}
+                    onChange={field.onChange}
+                    minHeight="10rem"
+                  />
+                )}
+              />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="job-qualifications">Qualifications (one per line)</Label>
-              <Textarea id="job-qualifications" rows={4} {...register("qualifications")} />
+              <Label htmlFor="job-qualifications">Qualifications</Label>
+              <Controller
+                control={control}
+                name="qualifications"
+                render={({ field }) => (
+                  <RichTextEditor
+                    id="job-qualifications"
+                    ariaLabel="Qualifications"
+                    value={field.value}
+                    onChange={field.onChange}
+                    minHeight="10rem"
+                  />
+                )}
+              />
             </div>
           </div>
 

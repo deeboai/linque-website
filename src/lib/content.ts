@@ -13,6 +13,15 @@ import {
   type JobApplicationStatus,
   type ScreeningQuestionKey,
 } from "@/lib/jobApplications";
+import {
+  plainListToHtml,
+  plainTextToHtml,
+  resolveRichList,
+  resolveRichText,
+  richTextToPlainList,
+  richTextToPlainText,
+  sanitizeRichText,
+} from "@/lib/richText";
 
 export type PublishStatus = "draft" | "published" | "scheduled";
 
@@ -47,10 +56,16 @@ export interface CMSJob {
   employmentType: string;
   department: string;
   remoteType: string;
+  /** Plain-text projections — safe for SEO metadata, JSON-LD, and listing blurbs. */
   summary: string;
   description: string;
   responsibilities: string[];
   qualifications: string[];
+  /** Sanitized markup. Empty for postings authored before rich text shipped. */
+  summaryHtml: string;
+  descriptionHtml: string;
+  responsibilitiesHtml: string;
+  qualificationsHtml: string;
   salaryRange?: string | null;
   applyEmail?: string | null;
   applyUrl?: string | null;
@@ -143,6 +158,11 @@ const mapJobPosting = (job: JobPosting): CMSJob => ({
   description: job.description,
   responsibilities: job.responsibilities,
   qualifications: job.qualifications,
+  // Seed data is plain text; convert so the render path is uniform.
+  summaryHtml: plainTextToHtml(job.summary),
+  descriptionHtml: plainTextToHtml(job.description),
+  responsibilitiesHtml: plainListToHtml(job.responsibilities),
+  qualificationsHtml: plainListToHtml(job.qualifications),
   salaryRange: job.salaryRange ?? null,
   applyEmail: job.applyEmail ?? null,
   applyUrl: job.applyUrl ?? null,
@@ -186,6 +206,10 @@ type SupabaseJobRow = {
   description?: string | null;
   responsibilities?: string[] | null;
   qualifications?: string[] | null;
+  summary_html?: string | null;
+  description_html?: string | null;
+  responsibilities_html?: string | null;
+  qualifications_html?: string | null;
   salary_range?: string | null;
   apply_email?: string | null;
   apply_url?: string | null;
@@ -264,6 +288,12 @@ const adaptJobFromSupabase = (record: SupabaseJobRow): CMSJob => ({
       description: record.description ?? "",
       responsibilities: record.responsibilities ?? [],
       qualifications: record.qualifications ?? [],
+      // Fall back to the legacy plain-text columns so postings authored before
+      // rich text shipped still render with their original formatting intact.
+      summaryHtml: resolveRichText(record.summary_html, record.summary),
+      descriptionHtml: resolveRichText(record.description_html, record.description),
+      responsibilitiesHtml: resolveRichList(record.responsibilities_html, record.responsibilities),
+      qualificationsHtml: resolveRichList(record.qualifications_html, record.qualifications),
       salaryRange: record.salary_range ?? null,
       applyEmail: record.apply_email ?? null,
       applyUrl: record.apply_url ?? null,
@@ -391,7 +421,14 @@ export const fetchJobBySlug = async (slug: string, options: FetchOptions = {}): 
 };
 
 export type CMSPostInput = Omit<CMSPost, "createdAt" | "updatedAt">;
-export type CMSJobInput = Omit<CMSJob, "createdAt" | "updatedAt">;
+/**
+ * Callers supply markup only. The plain-text columns are derived from it on write
+ * so the two representations cannot drift apart.
+ */
+export type CMSJobInput = Omit<
+  CMSJob,
+  "createdAt" | "updatedAt" | "summary" | "description" | "responsibilities" | "qualifications"
+>;
 export type CMSJobApplicationInput = Omit<
   CMSJobApplication,
   | "createdAt"
@@ -459,10 +496,17 @@ export const upsertJob = async (input: CMSJobInput) => {
     employment_type: input.employmentType,
     department: input.department,
     remote_type: input.remoteType,
-    summary: input.summary,
-    description: input.description,
-    responsibilities: input.responsibilities,
-    qualifications: input.qualifications,
+    // Markup is sanitized on write as well as on render — the admin UI is not the
+    // only thing that can call this.
+    summary_html: sanitizeRichText(input.summaryHtml),
+    description_html: sanitizeRichText(input.descriptionHtml),
+    responsibilities_html: sanitizeRichText(input.responsibilitiesHtml),
+    qualifications_html: sanitizeRichText(input.qualificationsHtml),
+    // Plain-text projections, derived so SEO metadata and JSON-LD never see tags.
+    summary: richTextToPlainText(input.summaryHtml),
+    description: richTextToPlainText(input.descriptionHtml),
+    responsibilities: richTextToPlainList(input.responsibilitiesHtml),
+    qualifications: richTextToPlainList(input.qualificationsHtml),
     salary_range: input.salaryRange,
     apply_email: input.applyEmail,
     apply_url: input.applyUrl,
