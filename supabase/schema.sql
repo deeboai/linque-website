@@ -55,6 +55,16 @@ create table if not exists public.jobs (
   updated_at timestamptz not null default now()
 );
 
+-- Rich text bodies for job postings. These hold sanitized HTML and are the source of
+-- truth when populated; the plain-text columns above are kept in sync as a plain-text
+-- projection for SEO metadata, JSON-LD, and the jobs listing blurb. Postings created
+-- before rich text shipped have null here, which is the signal to fall back to the
+-- legacy plain-text column.
+alter table public.jobs add column if not exists summary_html text;
+alter table public.jobs add column if not exists description_html text;
+alter table public.jobs add column if not exists responsibilities_html text;
+alter table public.jobs add column if not exists qualifications_html text;
+
 create table if not exists public.job_applications (
   id uuid primary key default uuid_generate_v4(),
   job_id uuid not null references public.jobs(id) on delete cascade,
