@@ -31,6 +31,7 @@ import { Textarea } from "@/components/ui/textarea";
 import RichTextEditor from "@/components/RichTextEditor";
 import RichTextContent from "@/components/RichTextContent";
 import { isRichTextEmpty } from "@/lib/richText";
+import { getErrorMessage } from "@/lib/errors";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -376,7 +377,7 @@ const PostsManager = () => {
     },
     onError: (error) => {
       console.error(error);
-      toast({ title: "Unable to save post", variant: "destructive" });
+      toast({ title: getErrorMessage(error, "Unable to save post"), variant: "destructive" });
     },
   });
 
@@ -485,7 +486,7 @@ const JobsManager = () => {
     },
     onError: (error) => {
       console.error(error);
-      toast({ title: error instanceof Error ? error.message : "Unable to save job", variant: "destructive" });
+      toast({ title: getErrorMessage(error, "Unable to save job"), variant: "destructive" });
     },
   });
 
