@@ -10,6 +10,8 @@ import { Card } from "@/components/ui/card";
 import { MapPin, Briefcase, Clock, ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
 import { useJob } from "@/hooks/useContent";
 import { JobApplicationForm } from "@/components/JobApplicationForm";
+import RichTextContent from "@/components/RichTextContent";
+import { isRichTextEmpty } from "@/lib/richText";
 
 const JobDetail = () => {
   const { slug } = useParams();
@@ -94,7 +96,10 @@ const JobDetail = () => {
             <h1 className="text-4xl md:text-5xl font-bold leading-tight">
               <ScribbleHighlight>{job.title}</ScribbleHighlight>
             </h1>
-            <p className="max-w-3xl text-lg text-muted-foreground leading-relaxed">{job.summary}</p>
+            <RichTextContent
+              html={job.summaryHtml}
+              className="max-w-3xl text-lg text-muted-foreground prose-p:text-muted-foreground"
+            />
             <div className="flex flex-wrap gap-3">
               {hasInternalApplications ? (
                 <Button asChild size="lg">
@@ -121,29 +126,25 @@ const JobDetail = () => {
             <Card className="border border-muted/60 bg-white/95 p-8 shadow-card space-y-6">
               <div className="space-y-3">
                 <h2 className="text-2xl font-semibold text-foreground">Role overview</h2>
-                <p className="text-muted-foreground leading-relaxed">{job.description}</p>
+                <RichTextContent html={job.descriptionHtml} className="text-muted-foreground" />
                 {job.salaryRange && (
                   <p className="text-sm text-muted-foreground">Compensation: {job.salaryRange}</p>
                 )}
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-foreground">What you&apos;ll own</h3>
-                <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-                  {job.responsibilities.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
+              {!isRichTextEmpty(job.responsibilitiesHtml) && (
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold text-foreground">What you&apos;ll own</h3>
+                  <RichTextContent html={job.responsibilitiesHtml} className="text-muted-foreground" />
+                </div>
+              )}
 
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-foreground">What you bring</h3>
-                <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-                  {job.qualifications.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              </div>
+              {!isRichTextEmpty(job.qualificationsHtml) && (
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold text-foreground">What you bring</h3>
+                  <RichTextContent html={job.qualificationsHtml} className="text-muted-foreground" />
+                </div>
+              )}
             </Card>
 
             <JobApplicationForm job={job} />

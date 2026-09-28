@@ -15,6 +15,7 @@ import JobDetail from "./pages/JobDetail";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
+import EditorSandbox from "./pages/EditorSandbox";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,8 @@ const App = () => (
             <Route path="/jobs/:slug" element={<JobDetail />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/admin" element={<Admin />} />
+            {/* Local development harness only — absent from every deployed build. */}
+            {import.meta.env.DEV && <Route path="/editor-sandbox" element={<EditorSandbox />} />}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>
